@@ -1,29 +1,46 @@
 <script setup>
+/**
+ * 周期账单设置表单 RecurringTransactionForm.vue
+ * 用于创建周期性执行的交易配置（如房租、订阅服务、工资发放等）
+ */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
 import { X, Calendar, Repeat, Tag, DollarSign, Info, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle } from 'lucide-vue-next'
 
+// --- Props 与 Emits ---
+
 const props = defineProps(['initialData'])
 const emit = defineEmits(['close', 'success'])
+
+// --- 状态与 Store ---
+
 const store = useTransactionStore()
 
+// 表单响应式数据
 const formData = ref({
-  description: '',
-  amount: '',
-  type: 'expense',
-  categoryId: '',
-  subCategoryId: '',
-  frequency: 'monthly',
-  startDate: new Date().toISOString().split('T')[0],
-  accountId: store.accounts[0]?.id || '1'
+  description: '',      // 账单描述
+  amount: '',           // 金额
+  type: 'expense',      // 类型：支出/收入
+  categoryId: '',       // 父分类 ID
+  subCategoryId: '',    // 子分类 ID
+  frequency: 'monthly', // 重复频率：每日/每周/每月/每年
+  startDate: new Date().toISOString().split('T')[0], // 开始日期
+  accountId: store.accounts[0]?.id || '1'           // 关联账户
 })
 
+// --- 计算属性 ---
+
+/**
+ * 平铺化的分类列表，用于 Select 下拉框展示，保持父子层级视觉效果
+ */
 const flatCategories = computed(() => {
   const result = []
   store.categories
     .filter(c => c.type === formData.value.type)
     .forEach(cat => {
+      // 添加父分类
       result.push({ id: cat.id, name: cat.name, isParent: true })
+      // 如果有子分类，添加带缩进的子分类
       if (cat.children) {
         cat.children.forEach(sub => {
           result.push({ id: sub.id, name: `  └─ ${sub.name}`, parentId: cat.id })
@@ -33,18 +50,26 @@ const flatCategories = computed(() => {
   return result
 })
 
+// --- 业务逻辑 ---
+
+/**
+ * 处理分类选择变更，自动关联父分类 ID
+ */
 const handleCategoryChange = (e) => {
   const selectedId = e.target.value
   const found = flatCategories.value.find(c => c.id === selectedId)
   if (found.parentId) {
+    // 选中了子分类
     formData.value.categoryId = found.parentId
     formData.value.subCategoryId = found.id
   } else {
+    // 选中了父分类
     formData.value.categoryId = found.id
     formData.value.subCategoryId = ''
   }
 }
 
+// 频率选项配置
 const frequencies = [
   { value: 'daily', label: '每日' },
   { value: 'weekly', label: '每周' },
@@ -52,6 +77,9 @@ const frequencies = [
   { value: 'yearly', label: '每年' }
 ]
 
+/**
+ * 提交表单逻辑
+ */
 const handleSubmit = () => {
   store.addRecurringTransaction({
     ...formData.value,
@@ -64,8 +92,11 @@ const handleSubmit = () => {
 </script>
 
 <template>
+  <!-- 弹窗遮罩层 -->
   <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <!-- 弹窗主体 -->
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <!-- 头部 -->
       <div class="px-6 py-4 border-b flex items-center justify-between bg-slate-50">
         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
           <Repeat class="text-primary-500" :size="20" />
@@ -76,7 +107,9 @@ const handleSubmit = () => {
         </button>
       </div>
 
+      <!-- 表单主体 -->
       <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
+        <!-- 类型切换：支出/收入 -->
         <div class="grid grid-cols-2 gap-4 p-1 bg-slate-100 rounded-xl">
           <button 
             type="button"
@@ -101,6 +134,7 @@ const handleSubmit = () => {
         </div>
 
         <div class="space-y-4">
+          <!-- 描述输入 -->
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">描述</label>
             <div class="relative">
@@ -115,6 +149,7 @@ const handleSubmit = () => {
             </div>
           </div>
 
+          <!-- 金额与分类 -->
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1">金额</label>
@@ -148,6 +183,7 @@ const handleSubmit = () => {
             </div>
           </div>
 
+          <!-- 频率与日期 -->
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-slate-700 mb-1">重复频率</label>
@@ -175,6 +211,7 @@ const handleSubmit = () => {
             </div>
           </div>
 
+          <!-- 结算账户选择 -->
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">结算账户</label>
             <div class="relative">
@@ -189,6 +226,7 @@ const handleSubmit = () => {
           </div>
         </div>
 
+        <!-- 表单操作按钮 -->
         <div class="pt-4 flex gap-3">
           <button 
             type="button"

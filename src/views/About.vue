@@ -1,15 +1,23 @@
 <template>
     <div>
-        <h1>About</h1>
-        <p>Count: {{ count }}</p>
-        <button @click="increment">Increment</button>
+        <h1>关于页面</h1>
+        <p>当前计数: {{ count }}</p>
+        <button @click="increment">点击增加</button>
     </div>
 </template>
 
 <script setup>
+/**
+ * 关于页面 About.vue (当前未在路由中使用)
+ */
 import { ref } from 'vue'
-let count = ref(0)
-let increment = () => {
+
+const count = ref(0) // 计数状态
+
+/**
+ * 增加计数器
+ */
+const increment = () => {
     count.value++
 }
 </script>

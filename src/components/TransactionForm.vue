@@ -1,20 +1,40 @@
 <script setup>
-import { ref, computed } from 'vue'
+/**
+ * 交易记录表单组件 TransactionForm.vue
+ * 用于新增或编辑支出、收入和转账记录
+ */
+import { ref, computed, onMounted } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
-import { Check, X, ChevronRight, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle, Tag as TagIcon, Hash } from 'lucide-vue-next'
+import { Check, X, ChevronRight, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle, Tag as TagIcon, Hash, RefreshCw, Calendar, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw } from 'lucide-vue-next'
 
 const props = defineProps({
   initialData: {
     type: Object,
-    default: null
+    default: null // 如果传入 initialData，则为编辑模式
   }
 })
 
 const emit = defineEmits(['success'])
 const store = useTransactionStore()
 
+// 支持的币种列表
+const currencies = [
+  { code: 'CNY', symbol: '¥', name: '人民币' },
+  { code: 'USD', symbol: '$', name: '美元' },
+  { code: 'EUR', symbol: '€', name: '欧元' },
+  { code: 'JPY', symbol: '¥', name: '日元' },
+  { code: 'HKD', symbol: '$', name: '港币' },
+  { code: 'GBP', symbol: '£', name: '英镑' }
+]
+
+// 获取当前日期字符串 (yyyy-MM-dd)
+const getTodayStr = () => new Date().toISOString().split('T')[0]
+
+// 表单响应式状态
 const form = ref(props.initialData ? { 
   ...props.initialData,
+  date: props.initialData.date ? new Date(props.initialData.date).toISOString().split('T')[0] : getTodayStr(),
+  currency: props.initialData.currency || store.baseCurrency,
   accountId: props.initialData.accountId || '1',
   fromAccountId: props.initialData.fromAccountId || '1',
   toAccountId: props.initialData.toAccountId || '2',
@@ -24,6 +44,8 @@ const form = ref(props.initialData ? {
 } : {
   description: '',
   amount: '',
+  date: getTodayStr(),
+  currency: store.baseCurrency,
   type: 'expense',
   categoryId: '',
   subCategoryId: '',
@@ -33,8 +55,35 @@ const form = ref(props.initialData ? {
   tags: []
 })
 
-const tagInput = ref('')
+onMounted(async () => {
+  // 挂载时尝试更新汇率（如果长时间未更新）
+  const lastUpdate = store.lastExchangeRateUpdate
+  const oneDay = 24 * 60 * 60 * 1000
+  if (!lastUpdate || (new Date() - new Date(lastUpdate)) > oneDay) {
+    store.fetchExchangeRates()
+  }
+})
 
+/**
+ * 计算换算后的本币金额
+ */
+const convertedAmount = computed(() => {
+  if (!form.value.amount || form.value.currency === store.baseCurrency) return null
+  return store.convertAmount(Number(form.value.amount), form.value.currency)
+})
+
+/**
+ * 获取当前币种符号
+ */
+const currentCurrencySymbol = computed(() => {
+  return currencies.find(c => c.code === form.value.currency)?.symbol || '¥'
+})
+
+const tagInput = ref('') // 标签输入框内容
+
+/**
+ * 添加标签
+ */
 const addTag = () => {
   const tag = tagInput.value.trim().replace(/^#/, '')
   if (tag && !form.value.tags.includes(tag)) {
@@ -43,55 +92,111 @@ const addTag = () => {
   tagInput.value = ''
 }
 
+/**
+ * 移除标签
+ * @param {number} index 标签索引
+ */
 const removeTag = (index) => {
   form.value.tags.splice(index, 1)
 }
 
+/**
+ * 选择常用标签（快速添加）
+ * @param {string} tag 标签名称
+ */
 const selectQuickTag = (tag) => {
   if (!form.value.tags.includes(tag)) {
     form.value.tags.push(tag)
   }
 }
 
+/**
+ * 根据交易类型过滤分类列表
+ */
 const filteredCategories = computed(() => {
   return store.categories.filter(c => c.type === form.value.type)
 })
 
+/**
+ * 获取当前选中的父分类对象
+ */
 const selectedCategory = computed(() => {
   return store.findCategoryById(form.value.categoryId)
 })
 
+/**
+ * 根据名称获取图标组件
+ * @param {string} name 图标名称
+ */
 const getIcon = (name) => {
   const icons = {
-    Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp
+    Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, Briefcase, PenTool, Plane,
+    Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw
   }
   return icons[name] || HelpCircle
 }
 
+/**
+ * 选择父分类
+ * @param {string} catId 分类ID
+ */
 const selectCategory = (catId) => {
   form.value.categoryId = catId
-  form.value.subCategoryId = '' // Reset sub-category when parent changes
+  form.value.subCategoryId = '' // 切换父分类时重置子分类
 }
 
+/**
+ * 选择子分类
+ * @param {string} subCatId 子分类ID
+ */
 const selectSubCategory = (subCatId) => {
   form.value.subCategoryId = subCatId
 }
 
+const formError = ref('')
+
+/**
+ * 提交表单
+ */
 const handleSubmit = () => {
-  if (!form.value.description || !form.value.amount) return
+  formError.value = ''
   
+  if (!form.value.amount) {
+    formError.value = '请输入金额'
+    return
+  }
+  
+  if (form.value.type !== 'transfer' && !form.value.categoryId) {
+    formError.value = '请选择一个分类'
+    return
+  }
+  
+  const originalAmount = Number(form.value.amount)
+  const currency = form.value.currency
+  
+  // 如果不是本币，计算换算后的金额存入 amount
+  // originalAmount 存原始外币金额
   const payload = {
     ...form.value,
-    amount: Number(form.value.amount)
+    originalAmount: originalAmount,
+    currency: currency,
+    amount: currency === store.baseCurrency 
+      ? originalAmount 
+      : store.convertAmount(originalAmount, currency),
+    exchangeRate: currency === store.baseCurrency 
+      ? 1 
+      : (store.convertAmount(originalAmount, currency) / originalAmount).toFixed(4)
   }
 
   if (props.initialData) {
+    // 编辑模式：调用更新方法
     store.updateTransaction(props.initialData.id, payload)
   } else {
+    // 新增模式：调用添加方法
     store.addTransaction(payload)
   }
   
-  emit('success')
+  emit('success') // 提交成功后通知父组件
 }
 </script>
 
@@ -125,18 +230,64 @@ const handleSubmit = () => {
       </button>
     </div>
 
-    <!-- Amount -->
+    <!-- Amount & Currency -->
     <div class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700">金额</label>
+      <div class="flex items-center justify-between">
+        <label class="block text-sm font-bold text-slate-700">金额</label>
+        <div v-if="form.currency !== store.baseCurrency" class="text-[10px] text-slate-400 flex items-center gap-1">
+          汇率按当前数据计算
+          <button type="button" @click="store.fetchExchangeRates" class="hover:text-primary-500 transition-colors">
+            <RefreshCw :size="10" />
+          </button>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <!-- Currency Selector -->
+        <div class="w-24 shrink-0 relative">
+          <select 
+            v-model="form.currency"
+            class="w-full h-12 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat"
+          >
+            <option v-for="c in currencies" :key="c.code" :value="c.code">
+              {{ c.code }}
+            </option>
+          </select>
+        </div>
+        <!-- Amount Input -->
+        <div class="relative flex-1">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">{{ currentCurrencySymbol }}</span>
+          <input 
+            v-model="form.amount"
+            type="number" 
+            step="0.01"
+            required
+            placeholder="0.00"
+            class="w-full pl-9 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-xl font-bold"
+          />
+        </div>
+      </div>
+      <!-- Conversion Preview -->
+      <div v-if="convertedAmount !== null" class="flex items-center gap-2 px-3 py-2 bg-primary-50/50 rounded-lg border border-primary-100/50 animate-in fade-in slide-in-from-top-1 duration-200">
+        <span class="text-xs text-primary-600 font-medium flex items-center gap-1">
+          <ChevronRight :size="12" />
+          约合人民币：<span class="text-sm font-bold">¥ {{ convertedAmount }}</span>
+        </span>
+        <span class="text-[10px] text-primary-400 ml-auto">
+          1 {{ form.currency }} ≈ {{ (convertedAmount / Number(form.amount)).toFixed(4) }} CNY
+        </span>
+      </div>
+    </div>
+
+    <!-- Date Selection -->
+    <div class="space-y-2">
+      <label class="block text-sm font-bold text-slate-700">日期</label>
       <div class="relative">
-        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">¥</span>
+        <Calendar :size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
         <input 
-          v-model="form.amount"
-          type="number" 
-          step="0.01"
+          v-model="form.date"
+          type="date" 
           required
-          placeholder="0.00"
-          class="w-full pl-9 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-xl font-bold"
+          class="w-full pl-11 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none"
         />
       </div>
     </div>
@@ -185,11 +336,10 @@ const handleSubmit = () => {
 
     <!-- Description -->
     <div class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700">备注</label>
+      <label class="block text-sm font-bold text-slate-700">备注 <span class="text-slate-400 font-normal">(选填)</span></label>
       <input 
         v-model="form.description"
         type="text" 
-        required
         placeholder="想记点什么？"
         class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base"
       />
@@ -230,10 +380,16 @@ const handleSubmit = () => {
 
     <!-- Category (Full width) -->
     <div v-if="form.type !== 'transfer'" class="md:col-span-2 space-y-3 mt-2">
-      <label class="block text-sm font-bold text-slate-700">分类</label>
+      <div class="flex items-center justify-between">
+        <label class="block text-sm font-bold text-slate-700">分类 <span class="text-rose-500">*</span></label>
+        <span v-if="formError === '请选择一个分类'" class="text-xs font-bold text-rose-500 animate-pulse">请选择一个分类</span>
+      </div>
       
       <!-- Parent Categories -->
-      <div class="grid grid-cols-4 sm:grid-cols-8 gap-3">
+      <div 
+        class="grid grid-cols-4 sm:grid-cols-8 gap-3 p-1 rounded-2xl transition-all"
+        :class="{ 'ring-2 ring-rose-500/20 bg-rose-50/10': formError === '请选择一个分类' }"
+      >
         <button 
           v-for="cat in filteredCategories" 
           :key="cat.id"
@@ -271,6 +427,10 @@ const handleSubmit = () => {
 
     <!-- Submit (Full width) -->
     <div class="md:col-span-2 pt-4">
+      <div v-if="formError" class="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+        <X :size="16" />
+        {{ formError }}
+      </div>
       <button 
         type="submit"
         class="w-full h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-200 flex items-center justify-center gap-2 text-base"

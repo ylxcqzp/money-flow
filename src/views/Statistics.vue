@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 统计报表页面 Statistics.vue
+ * 提供收支趋势、分类占比分析以及 PDF 报表导出功能
+ */
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTransactionStore } from '../stores/transaction';
@@ -22,7 +26,7 @@ import {
 import { format, subMonths, startOfMonth, endOfMonth, isSameMonth, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
-// ECharts imports
+// ECharts 核心模块导入
 import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -35,7 +39,7 @@ import {
   DataZoomComponent
 } from 'echarts/components';
 
-// PDF 导出
+// PDF 导出依赖
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 
@@ -56,20 +60,20 @@ const router = useRouter();
 const store = useTransactionStore();
 
 // --- 状态管理 ---
-const chartType = ref<'expense' | 'income'>('expense');
-const drilldownCategoryId = ref<string | null>(null);
+const chartType = ref<'expense' | 'income'>('expense'); // 图表统计类型：支出/收入
+const drilldownCategoryId = ref<string | null>(null);   // 当前下钻的父分类ID
 
-// 自定义筛选状态
-const filterStartDate = ref(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-const filterEndDate = ref(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
-const selectedAccountIds = ref<string[]>([]);
-const selectedTags = ref<string[]>([]);
-const showFilterPanel = ref(false);
+// 自定义高级筛选状态
+const filterStartDate = ref(format(startOfMonth(new Date()), 'yyyy-MM-dd')); // 筛选开始日期
+const filterEndDate = ref(format(endOfMonth(new Date()), 'yyyy-MM-dd'));   // 筛选结束日期
+const selectedAccountIds = ref<string[]>([]);                             // 已选账户ID列表
+const selectedTags = ref<string[]>([]);                                   // 已选标签列表
+const showFilterPanel = ref(false);                                       // 是否显示高级筛选面板
 
 // --- 数据计算逻辑 ---
 
 /**
- * 获取分类名称
+ * 根据ID获取分类名称
  * @param id 分类ID
  * @returns {string} 分类名称
  */
@@ -79,7 +83,8 @@ const getCategoryName = (id: string) => {
 };
 
 /**
- * 组合筛选后的交易数据
+ * 组合筛选后的交易数据列表
+ * 应用时间范围、账户、标签等多重过滤条件
  */
 const filteredData = computed(() => {
   return store.transactions.filter(t => {
@@ -87,16 +92,16 @@ const filteredData = computed(() => {
     const start = startOfDay(parseISO(filterStartDate.value));
     const end = endOfDay(parseISO(filterEndDate.value));
     
-    // 时间筛选
+    // 1. 时间筛选
     const dateMatch = isWithinInterval(tDate, { start, end });
     if (!dateMatch) return false;
 
-    // 账户筛选
+    // 2. 账户筛选
     if (selectedAccountIds.value.length > 0) {
       if (!selectedAccountIds.value.includes(t.accountId || '1')) return false;
     }
 
-    // 标签筛选
+    // 3. 标签筛选
     if (selectedTags.value.length > 0) {
       if (!t.tags || t.tags.length === 0) return false;
       const tagMatch = selectedTags.value.some(tag => t.tags.includes(tag));
@@ -108,7 +113,7 @@ const filteredData = computed(() => {
 });
 
 /**
- * 筛选后的收支汇总
+ * 筛选后的收支汇总统计
  */
 const summary = computed(() => {
   const income = filteredData.value
@@ -123,8 +128,8 @@ const summary = computed(() => {
 });
 
 /**
- * 饼图配置选项
- * 计算当前筛选下的分类占比数据，支持下钻逻辑
+ * 饼图配置选项 (ECharts Option)
+ * 动态计算当前筛选下的分类占比数据，并支持分类下钻逻辑
  */
 const pieChartOption = computed(() => {
   const transactions = filteredData.value.filter(t => t.type === chartType.value);
@@ -132,6 +137,7 @@ const pieChartOption = computed(() => {
   let data: { name: string, value: number, id: string }[] = [];
   
   if (!drilldownCategoryId.value) {
+    // 顶层分类统计
     const summaryMap: Record<string, number> = {};
     transactions.forEach(t => {
       const catId = t.categoryId;
@@ -146,6 +152,7 @@ const pieChartOption = computed(() => {
       value
     }));
   } else {
+    // 子分类下钻统计
     const parentId = drilldownCategoryId.value;
     const summaryMap: Record<string, number> = {};
     
@@ -161,6 +168,7 @@ const pieChartOption = computed(() => {
     }));
   }
 
+  // 按金额从大到小排序
   data.sort((a, b) => b.value - a.value);
 
   return {
@@ -189,7 +197,8 @@ const pieChartOption = computed(() => {
 });
 
 /**
- * 折线图配置选项 (按日/按月聚合)
+ * 折线图配置选项 (ECharts Option)
+ * 展示收支随时间的变化趋势
  */
 const lineChartOption = computed(() => {
   const dateMap: Record<string, { income: number, expense: number }> = {};
@@ -220,11 +229,12 @@ const lineChartOption = computed(() => {
 });
 
 /**
- * 处理饼图点击事件
+ * 处理饼图点击事件，执行分类下钻
  */
 const onPieClick = (params: any) => {
   if (!drilldownCategoryId.value) {
     const category = store.findCategoryById(params.data.id);
+    // 仅当分类有子类时允许下钻
     if (category && category.children && category.children.length > 0) {
       drilldownCategoryId.value = params.data.id;
     }
@@ -232,12 +242,13 @@ const onPieClick = (params: any) => {
 };
 
 /**
- * 重置下钻
+ * 返回上一层分类（重置下钻）
  */
 const goBackToTopLevel = () => { drilldownCategoryId.value = null; };
 
 /**
- * 切换账户筛选
+ * 切换账户筛选状态
+ * @param id 账户ID
  */
 const toggleAccount = (id: string) => {
   const index = selectedAccountIds.value.indexOf(id);
@@ -246,7 +257,8 @@ const toggleAccount = (id: string) => {
 };
 
 /**
- * 切换标签筛选
+ * 切换标签筛选状态
+ * @param tag 标签名称
  */
 const toggleTag = (tag: string) => {
   const index = selectedTags.value.indexOf(tag);
@@ -255,7 +267,7 @@ const toggleTag = (tag: string) => {
 };
 
 /**
- * 重置所有筛选
+ * 重置所有筛选条件到默认值
  */
 const resetFilters = () => {
   filterStartDate.value = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -265,35 +277,30 @@ const resetFilters = () => {
 };
 
 /**
- * 生成并导出 PDF 报表
+ * 导出 PDF 报表流程
+ * 采用 html2canvas 将页面内容转为图片，再通过 jsPDF 生成 PDF 文件
  */
-const isExporting = ref(false);
+const isExporting = ref(false); // 导出状态标识
 const exportToPDF = async () => {
   if (isExporting.value) return;
   
-  console.log('开始导出 PDF...');
   isExporting.value = true;
   store.addNotification('正在准备报表数据...', 'info');
 
   try {
     const element = document.getElementById('report-content');
-    if (!element) {
-      console.error('未找到 id 为 report-content 的元素');
-      throw new Error('找不到报表内容区域');
-    }
+    if (!element) throw new Error('找不到报表内容区域');
 
-    console.log('正在捕捉页面内容 (html2canvas)...');
     store.addNotification('正在生成报表图片，请稍候...', 'info');
 
-    // 等待一小会儿确保图表渲染完成并稳定
+    // 等待图表渲染完全稳定
     await new Promise(resolve => setTimeout(resolve, 800));
 
     const canvas = await html2canvas(element, {
-      scale: 2, // 提高清晰度
+      scale: 2, // 2倍缩放以保证高清打印
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
-      logging: true, // 开启日志方便调试
       width: element.offsetWidth,
       height: element.offsetHeight,
       onclone: (clonedDoc) => {
@@ -306,43 +313,34 @@ const exportToPDF = async () => {
       }
     });
     
-    console.log('内容捕捉完成，正在转换 PDF...');
     const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF('p', 'mm', 'a4'); // 创建 A4 纸张大小的 PDF
     
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     
     const imgProps = pdf.getImageProperties(imgData);
-    const margin = 10; // 边距 10mm
+    const margin = 10; // 页面边距 10mm
     const contentWidth = pdfWidth - (margin * 2);
     const contentHeight = (imgProps.height * contentWidth) / imgProps.width;
     
-    // 检查是否需要分页
-    let heightLeft = contentHeight;
     let position = margin;
 
-    console.log(`PDF 内容高度: ${contentHeight}mm, A4 可用高度: ${pdfHeight}mm`);
-
+    // 将生成的图片添加到 PDF
     pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
     
-    // 如果内容超过一页，这里简单处理（后续可优化多页切割）
-    // 目前保持在一页内，jspdf 会根据 contentHeight 渲染
-    
+    // 生成文件名并触发下载
     const fileName = `财务报表_${filterStartDate.value}_至_${filterEndDate.value}.pdf`;
-    console.log(`正在触发浏览器下载: ${fileName}`);
     pdf.save(fileName);
     
     store.addNotification('报表已生成！请查看浏览器的“下载”文件夹', 'success');
   } catch (error: any) {
-    console.error('PDF 导出过程出错:', error);
+    console.error('PDF 导出失败:', error);
     store.addNotification(`报表生成失败: ${error.message || '未知错误'}`, 'error');
   } finally {
     isExporting.value = false;
-    console.log('导出流程结束');
   }
 };
-
 </script>
 
 <template>
@@ -456,36 +454,86 @@ const exportToPDF = async () => {
 
       <!-- 报表导出内容区域 -->
       <div id="report-content" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <!-- 报表头部 -->
-        <div class="p-8 bg-slate-900 text-white">
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <div class="flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white">
-                  <Wallet :size="24" />
-                </div>
-                <h2 class="text-2xl font-bold tracking-tight">个人财务报表</h2>
+        <!-- 报表头部重新设计 -->
+        <div class="p-8 border-b border-slate-100">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
+                <Wallet :size="28" />
               </div>
-              <p class="text-slate-400 text-sm">生成时间：{{ format(new Date(), 'yyyy-MM-dd HH:mm') }}</p>
+              <div>
+                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">个人财务报表</h2>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <p class="text-slate-500 text-xs font-medium">生成时间：{{ format(new Date(), 'yyyy-MM-dd HH:mm') }}</p>
+                </div>
+              </div>
             </div>
-            <div class="text-right">
-              <div class="text-slate-400 text-xs uppercase tracking-wider mb-1 font-semibold">统计周期</div>
-              <div class="text-lg font-medium">{{ filterStartDate }} 至 {{ filterEndDate }}</div>
+            
+            <div class="bg-slate-50 px-4 py-3 rounded-2xl border border-slate-200/60 flex items-center gap-3">
+              <div class="p-2 bg-white rounded-lg shadow-sm">
+                <CalendarIcon :size="18" class="text-slate-400" />
+              </div>
+              <div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold tracking-widest leading-none mb-1">统计周期</div>
+                <div class="text-sm font-semibold text-slate-700">{{ filterStartDate }} <span class="text-slate-300 mx-1">至</span> {{ filterEndDate }}</div>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-8 pt-6 border-t border-white/10">
-            <div>
-              <div class="text-emerald-400 text-xs font-semibold mb-1 uppercase">总收入</div>
-              <div class="text-3xl font-bold">¥ {{ summary.income.toLocaleString() }}</div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 总收入卡片 -->
+            <div class="relative overflow-hidden group p-6 rounded-2xl bg-emerald-50/50 border border-emerald-100 transition-all hover:shadow-md">
+              <div class="absolute -right-4 -bottom-4 text-emerald-100 group-hover:text-emerald-200/80 transition-colors">
+                <TrendingUp :size="100" />
+              </div>
+              <div class="relative z-10">
+                <div class="flex items-center gap-2 text-emerald-600 mb-3">
+                  <div class="p-1.5 bg-white rounded-lg shadow-sm border border-emerald-100">
+                    <TrendingUp :size="16" />
+                  </div>
+                  <span class="text-xs font-bold uppercase tracking-wider">总收入</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900">
+                  <span class="text-lg font-bold text-emerald-600 mr-1">¥</span>{{ summary.income.toLocaleString() }}
+                </div>
+              </div>
             </div>
-            <div>
-              <div class="text-rose-400 text-xs font-semibold mb-1 uppercase">总支出</div>
-              <div class="text-3xl font-bold">¥ {{ summary.expense.toLocaleString() }}</div>
+
+            <!-- 总支出卡片 -->
+            <div class="relative overflow-hidden group p-6 rounded-2xl bg-rose-50/50 border border-rose-100 transition-all hover:shadow-md">
+              <div class="absolute -right-4 -bottom-4 text-rose-100 group-hover:text-rose-200/80 transition-colors">
+                <CreditCard :size="100" />
+              </div>
+              <div class="relative z-10">
+                <div class="flex items-center gap-2 text-rose-600 mb-3">
+                  <div class="p-1.5 bg-white rounded-lg shadow-sm border border-rose-100">
+                    <CreditCard :size="16" />
+                  </div>
+                  <span class="text-xs font-bold uppercase tracking-wider">总支出</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900">
+                  <span class="text-lg font-bold text-rose-600 mr-1">¥</span>{{ summary.expense.toLocaleString() }}
+                </div>
+              </div>
             </div>
-            <div>
-              <div class="text-primary-400 text-xs font-semibold mb-1 uppercase">净收支</div>
-              <div class="text-3xl font-bold">¥ {{ summary.balance.toLocaleString() }}</div>
+
+            <!-- 净收支卡片 -->
+            <div class="relative overflow-hidden group p-6 rounded-2xl bg-primary-50/50 border border-primary-100 transition-all hover:shadow-md">
+              <div class="absolute -right-4 -bottom-4 text-primary-100 group-hover:text-primary-200/80 transition-colors">
+                <BarChart3 :size="100" />
+              </div>
+              <div class="relative z-10">
+                <div class="flex items-center gap-2 text-primary-600 mb-3">
+                  <div class="p-1.5 bg-white rounded-lg shadow-sm border border-primary-100">
+                    <BarChart3 :size="16" />
+                  </div>
+                  <span class="text-xs font-bold uppercase tracking-wider">净收支</span>
+                </div>
+                <div class="text-3xl font-black text-slate-900" :class="summary.balance >= 0 ? 'text-slate-900' : 'text-rose-700'">
+                  <span class="text-lg font-bold text-primary-600 mr-1">¥</span>{{ summary.balance.toLocaleString() }}
+                </div>
+              </div>
             </div>
           </div>
         </div>

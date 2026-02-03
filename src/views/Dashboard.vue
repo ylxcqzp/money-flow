@@ -1,4 +1,8 @@
 <script setup>
+/**
+ * 仪表盘页面 Dashboard.vue
+ * 项目主入口页面，包含收支统计、账单列表、账户管理、预算设置等核心功能
+ */
 import { useTransactionStore } from '../stores/transaction'
 import StatsCard from '../components/StatsCard.vue'
 import TransactionForm from '../components/TransactionForm.vue'
@@ -8,7 +12,8 @@ import BudgetSetter from '../components/BudgetSetter.vue'
 import RecurringTransactionForm from '../components/RecurringTransactionForm.vue'
 import CategoryManager from '../components/CategoryManager.vue'
 import AccountManager from '../components/AccountManager.vue'
-import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3 } from 'lucide-vue-next'
+import GoalsManager from '../components/GoalsManager.vue'
+import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3, PieChart, Target, Scale, BellRing, RefreshCw } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import { ref, computed, onMounted } from 'vue'
@@ -16,33 +21,65 @@ import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } fr
 
 const store = useTransactionStore()
 const router = useRouter()
-const showForm = ref(false)
-const showBudgetSetter = ref(false)
-const showRecurringForm = ref(false)
-const showCategoryManager = ref(false)
-const showAccountManager = ref(false)
-const editingTransaction = ref(null)
+
+// 弹窗显示状态控制
+const showForm = ref(false)              // 记账表单弹窗
+const showBudgetSetter = ref(false)      // 预算设置弹窗
+const showRecurringForm = ref(false)     // 周期账单表单弹窗
+const showCategoryManager = ref(false)   // 分类管理弹窗
+const showAccountManager = ref(false)    // 账户管理弹窗
+const showGoalsManager = ref(false)      // 储蓄目标弹窗
+const editingTransaction = ref(null)     // 当前正在编辑的交易对象
 
 onMounted(() => {
+  // 页面加载时检查并生成到期的周期账单
   store.checkAndGenerateRecurring()
+  
+  // 检查汇率更新
+  const lastUpdate = store.lastExchangeRateUpdate
+  const oneDay = 24 * 60 * 60 * 1000
+  if (!lastUpdate || (new Date() - new Date(lastUpdate)) > oneDay) {
+    store.fetchExchangeRates()
+  }
 })
 
+/**
+ * 格式化汇率更新时间
+ */
+const lastExchangeRateUpdateLabel = computed(() => {
+  if (!store.lastExchangeRateUpdate) return '从未更新'
+  return format(new Date(store.lastExchangeRateUpdate), 'MM-dd HH:mm')
+})
+
+/**
+ * 处理编辑交易操作
+ * @param {Object} transaction 交易对象
+ */
 const handleEdit = (transaction) => {
   editingTransaction.value = transaction
   showForm.value = true
 }
 
+/**
+ * 账单提交成功后的回调
+ */
 const handleFormSuccess = () => {
   showForm.value = false
   editingTransaction.value = null
 }
 
+/**
+ * 关闭记账表单弹窗
+ */
 const closeForm = () => {
   showForm.value = false
   editingTransaction.value = null
 }
 
-// Filter logic
+/**
+ * 过滤日期显示标签
+ * 根据当前的过滤类型（年/月/日）返回对应的日期格式
+ */
 const filterLabel = computed(() => {
   if (store.filterType === 'year') return format(store.filterDate, 'yyyy年')
   if (store.filterType === 'month') return format(store.filterDate, 'yyyy年MM月')
@@ -50,6 +87,10 @@ const filterLabel = computed(() => {
   return '全部记录'
 })
 
+/**
+ * 导航切换过滤日期
+ * @param {'prev' | 'next'} direction 切换方向：上一个/下一个
+ */
 const navigateFilter = (direction) => {
   const amount = direction === 'next' ? 1 : -1
   let newDate = new Date(store.filterDate)
@@ -65,6 +106,10 @@ const navigateFilter = (direction) => {
   store.filterDate = newDate
 }
 
+/**
+ * 根据图标名称获取账户图标组件
+ * @param {string} iconName 图标名称
+ */
 const getAccountIcon = (iconName) => {
   const icons = {
     Wallet,
@@ -158,6 +203,13 @@ const getAccountIcon = (iconName) => {
           >
             {{ {all: '全部', year: '按年', month: '按月', day: '按日'}[type] }}
           </button>
+          <button 
+            @click="showGoalsManager = true"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-500 hover:text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+          >
+            <Target :size="16" />
+            目标追踪
+          </button>
         </div>
 
         <div v-if="store.filterType !== 'all'" class="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-slate-200">
@@ -209,19 +261,137 @@ const getAccountIcon = (iconName) => {
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatsCard 
-          title="当前余额" 
+          title="本月结余" 
+          :amount="store.currentMonthBalance" 
+          :type="store.currentMonthBalance >= 0 ? 'income' : 'expense'"
+          :icon="Scale"
+          :sub-text="store.filterType === 'all' ? '当前月份' : ''"
+        />
+        <StatsCard 
+          title="储蓄率" 
+          :amount="store.savingsRate" 
+          type="rate"
+          :is-percent="true"
+          :icon="PieChart"
+          :progress="store.savingsRate"
+          :sub-text="store.currentMonthIncome > 0 ? '结余/收入' : '暂无收入'"
+        />
+        <StatsCard 
+          title="预算完成度" 
+          :amount="store.budgetProgress" 
+          type="expense"
+          :is-percent="true"
+          :icon="Target"
+          :progress="store.budgetProgress"
+          :sub-text="store.isOverBudget ? '已超支' : '预算内'"
+          tooltip-position="right"
+        >
+          <template v-if="store.currentMonthCategoryBudgets.length > 0" #tooltip>
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                分类预算进度
+                <span class="text-[10px] bg-primary-500/20 text-primary-400 px-1.5 py-0.5 rounded-full border border-primary-500/30">详细</span>
+              </h4>
+              <div class="space-y-2.5">
+                <div v-for="cb in store.currentMonthCategoryBudgets" :key="cb.id" class="space-y-1">
+                  <div class="flex items-center justify-between text-[10px] font-bold">
+                    <span class="text-slate-300">{{ cb.name }}</span>
+                    <span :class="cb.isOver ? 'text-rose-400' : 'text-slate-400'">{{ Math.round(cb.progress) }}%</span>
+                  </div>
+                  <div class="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div 
+                      class="h-full transition-all duration-500"
+                      :class="cb.isOver ? 'bg-rose-500' : 'bg-primary-500'"
+                      :style="{ width: `${Math.min(cb.progress, 100)}%` }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </StatsCard>
+      </div>
+
+      <!-- 预算复盘与分析 -->
+      <div v-if="store.budgetReviewSuggestions.length > 0" class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm overflow-hidden relative group">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+          
+          <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2 relative z-10">
+            <div class="w-6 h-6 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600">
+              <AlertCircle :size="14" />
+            </div>
+            预算复盘建议
+          </h3>
+          
+          <div class="space-y-3 relative z-10">
+            <div 
+              v-for="(suggestion, index) in store.budgetReviewSuggestions" 
+              :key="index"
+              class="flex items-start gap-3 p-3 rounded-2xl border transition-all"
+              :class="{
+                'bg-rose-50 border-rose-100 text-rose-700': suggestion.type === 'danger',
+                'bg-amber-50 border-amber-100 text-amber-700': suggestion.type === 'warning',
+                'bg-blue-50 border-blue-100 text-blue-700': suggestion.type === 'info'
+              }"
+            >
+              <component 
+                :is="suggestion.type === 'danger' ? X : (suggestion.type === 'warning' ? AlertCircle : Check)" 
+                :size="16" 
+                class="mt-0.5 shrink-0" 
+              />
+              <p class="text-xs font-medium leading-relaxed">{{ suggestion.message }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="store.currentMonthCategoryBudgets.length > 0" class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+              <LayoutGrid :size="14" />
+            </div>
+            分类预算执行
+          </h3>
+          
+          <div class="space-y-4">
+            <div v-for="cb in store.currentMonthCategoryBudgets" :key="cb.id" class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <span>{{ cb.name }}</span>
+                  <span v-if="cb.isOver" class="text-[10px] px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded-full">超支</span>
+                </div>
+                <div class="text-slate-400">
+                  <span class="text-slate-700">¥{{ cb.spent.toFixed(0) }}</span> / ¥{{ cb.limit.toFixed(0) }}
+                </div>
+              </div>
+              <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  class="h-full transition-all duration-1000"
+                  :class="cb.isOver ? 'bg-rose-500' : (cb.progress > 80 ? 'bg-amber-500' : 'bg-primary-500')"
+                  :style="{ width: `${Math.min(cb.progress, 100)}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historical Stats Overview -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatsCard 
+          title="当前总余额" 
           :amount="store.balance" 
           type="balance"
           :icon="Wallet"
         />
         <StatsCard 
-          title="总收入" 
+          title="筛选收入" 
           :amount="store.totalIncome" 
           type="income"
           :icon="TrendingUp"
         />
         <StatsCard 
-          title="总支出" 
+          title="筛选支出" 
           :amount="store.totalExpense" 
           type="expense"
           :icon="TrendingDown"
@@ -231,11 +401,34 @@ const getAccountIcon = (iconName) => {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Transaction List -->
         <div class="lg:col-span-2">
-          <TransactionList @edit="handleEdit" />
+          <TransactionList @edit="handleEdit" @add="showForm = true" />
         </div>
 
         <!-- Right Panel (e.g., Quick Actions or Summary) -->
         <div class="space-y-6">
+          <!-- Exchange Rate Info Card -->
+          <div class="bg-gradient-to-br from-primary-600 to-primary-500 p-4 rounded-2xl text-white shadow-lg shadow-primary-200 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
+              <RefreshCw :size="48" />
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
+              <div>
+                <p class="text-[10px] text-primary-100 font-bold uppercase tracking-wider mb-1">多币种支持已开启</p>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold">汇率已更新</span>
+                  <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{{ lastExchangeRateUpdateLabel }}</span>
+                </div>
+              </div>
+              <button 
+                @click="store.fetchExchangeRates" 
+                class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all active:rotate-180 duration-500"
+                title="手动刷新汇率"
+              >
+                <RefreshCw :size="14" />
+              </button>
+            </div>
+          </div>
+
           <!-- Accounts Card -->
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-6">
@@ -386,6 +579,36 @@ const getAccountIcon = (iconName) => {
               清晰的收支记录是理财的第一步。继续保持这个好习惯！
             </p>
           </div>
+
+          <!-- 储蓄目标面板 -->
+          <div v-if="store.goals.length > 0" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <Target :size="20" class="text-primary-500" />
+                储蓄目标
+              </h2>
+              <button 
+                @click="showGoalsManager = true"
+                class="p-2 hover:bg-slate-50 rounded-lg text-primary-600 transition-colors"
+              >
+                <ChevronRight :size="18" />
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div v-for="goal in store.goals.slice(0, 2)" :key="goal.id" class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-600">{{ goal.name }}</span>
+                  <span class="text-primary-600">{{ Math.round((goal.currentAmount / goal.targetAmount) * 100) }}%</span>
+                </div>
+                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-primary-500 transition-all duration-1000"
+                    :style="{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -472,6 +695,33 @@ const getAccountIcon = (iconName) => {
         <!-- Modal Content (Scrollable) -->
         <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
           <AccountManager @close="showAccountManager = false" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Goals Manager Modal -->
+    <div v-if="showGoalsManager" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showGoalsManager = false"></div>
+      <div class="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        <!-- Modal Header (Fixed) -->
+        <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
+              <Target :size="20" />
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-800">储蓄目标追踪</h2>
+              <p class="text-xs text-slate-400 mt-0.5">为梦想攒下每一分钱</p>
+            </div>
+          </div>
+          <button @click="showGoalsManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <X :size="20" class="text-slate-400" />
+          </button>
+        </div>
+        
+        <!-- Modal Content (Scrollable) -->
+        <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+          <GoalsManager />
         </div>
       </div>
     </div>

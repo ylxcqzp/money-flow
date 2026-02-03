@@ -10,7 +10,7 @@ body {
   @apply bg-slate-50 text-slate-900 m-0 p-0;
 }
 
-/* Custom scrollbar for a modern look */
+/* 现代风格的自定义滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -28,6 +28,7 @@ body {
   @apply bg-slate-300;
 }
 
+/* 颜色与字体主题配置 */
 @theme {
   --color-primary-50: #f0f9ff;
   --color-primary-100: #e0f2fe;
