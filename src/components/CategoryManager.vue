@@ -30,12 +30,8 @@ const newCategory = ref({
   type: 'expense'
 })
 
-const filteredCategories = computed(() => {
-  return store.categories.filter(c => c.type === activeTab.ref || (activeTab.value === 'expense' ? c.type === 'expense' : c.type === 'income'))
-})
-
-// Corrected filteredCategories to use activeTab.value
 const categoriesToDisplay = computed(() => {
+  if (activeTab.value === 'all') return store.categories
   return store.categories.filter(c => c.type === activeTab.value)
 })
 
