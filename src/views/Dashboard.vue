@@ -8,12 +8,14 @@ import BudgetSetter from '../components/BudgetSetter.vue'
 import RecurringTransactionForm from '../components/RecurringTransactionForm.vue'
 import CategoryManager from '../components/CategoryManager.vue'
 import AccountManager from '../components/AccountManager.vue'
-import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check } from 'lucide-vue-next'
+import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3 } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 
 import { ref, computed, onMounted } from 'vue'
 import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } from 'date-fns'
 
 const store = useTransactionStore()
+const router = useRouter()
 const showForm = ref(false)
 const showBudgetSetter = ref(false)
 const showRecurringForm = ref(false)
@@ -87,13 +89,22 @@ const getAccountIcon = (iconName) => {
             个人记账
           </h1>
         </div>
-        <button 
-          @click="showForm = true"
-          class="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-primary-200"
-        >
-          <Plus :size="20" />
-          <span>记一笔</span>
-        </button>
+        <div class="flex items-center gap-3">
+          <button 
+            @click="router.push('/statistics')"
+            class="flex items-center gap-2 text-slate-600 hover:text-primary-600 px-3 py-2 rounded-lg transition-all hover:bg-primary-50"
+          >
+            <BarChart3 :size="20" />
+            <span class="text-sm font-medium">数据分析</span>
+          </button>
+          <button 
+            @click="showForm = true"
+            class="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all active:scale-95 shadow-lg shadow-primary-200"
+          >
+            <Plus :size="20" />
+            <span>记一笔</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -382,11 +393,11 @@ const getAccountIcon = (iconName) => {
     <!-- Modal Form -->
     <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="closeForm"></div>
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative z-10 overflow-hidden">
         <div class="p-6">
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-slate-800">{{ editingTransaction ? '修改账单' : '记一笔' }}</h2>
-            <button @click="closeForm" class="text-slate-400 hover:text-slate-600">
+            <button @click="closeForm" class="text-slate-400 hover:text-slate-600 p-1">
               <X :size="24" />
             </button>
           </div>
@@ -399,11 +410,11 @@ const getAccountIcon = (iconName) => {
     <div v-if="showBudgetSetter" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showBudgetSetter = false"></div>
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-slate-800">设置预算</h2>
-            <button @click="showBudgetSetter = false" class="text-slate-400 hover:text-slate-600">
-              <X :size="24" />
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-slate-800">设置预算</h2>
+            <button @click="showBudgetSetter = false" class="text-slate-400 hover:text-slate-600 p-1">
+              <X :size="20" />
             </button>
           </div>
           <BudgetSetter @success="showBudgetSetter = false" />
