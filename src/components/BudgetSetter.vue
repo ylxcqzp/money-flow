@@ -5,7 +5,7 @@
  */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
-import { Check, ChevronDown, ChevronUp, AlertCircle, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle } from 'lucide-vue-next'
+import { Check, Loader2, ChevronDown, ChevronUp, AlertCircle, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle } from 'lucide-vue-next'
 
 // --- 定义事件与 Store ---
 
@@ -60,12 +60,14 @@ const expenseCategories = computed(() => {
   return store.categories.filter(c => c.type === 'expense')
 })
 
+const isSubmitting = ref(false)
+
 // --- 业务逻辑 ---
 
 /**
  * 处理保存预算的操作
  */
-const handleSave = () => {
+const handleSave = async () => {
   if (isOverTotal.value) {
     store.addNotification('分类预算总和不能超过总预算金额', 'error')
     return
@@ -84,10 +86,13 @@ const handleSave = () => {
   })
 
   // 将输入值存入 Store
-  store.setBudget(store.currentMonthKey, budgetData)
+  isSubmitting.value = true
+  const success = await store.setBudget(store.currentMonthKey, budgetData)
+  isSubmitting.value = false
   
-  // 发出成功事件
-  emit('success')
+  if (success) {
+    emit('success')
+  }
 }
 </script>
 
@@ -163,10 +168,13 @@ const handleSave = () => {
     <div class="pt-2">
       <button 
         @click="handleSave"
-        class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-200 flex items-center justify-center gap-2 group"
+        :disabled="isSubmitting"
+        class="w-full py-4 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed text-white rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-200 flex items-center justify-center gap-2 group"
       >
-        <Check :size="20" class="group-hover:scale-110 transition-transform" />
-        保存所有预算设置
+        <Loader2 v-if="isSubmitting" class="animate-spin" :size="20" />
+        <Check v-else :size="20" class="group-hover:scale-110 transition-transform" />
+        <span v-if="isSubmitting">正在保存...</span>
+        <span v-else>保存所有预算设置</span>
       </button>
     </div>
   </div>

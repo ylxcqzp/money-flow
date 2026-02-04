@@ -4,7 +4,7 @@
  * 用于展示过滤后的交易记录，并支持编辑和删除操作
  */
 import { useTransactionStore } from '../stores/transaction'
-import { Trash2, Calendar, Tag, Edit2, ArrowRightLeft, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle, Hash, Plus, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw, ArrowUpDown, ChevronDown, Check } from 'lucide-vue-next'
+import { Trash2, Calendar, Tag, Edit2, ArrowRightLeft, Loader2, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle, Hash, Plus, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw, ArrowUpDown, ChevronDown, Check } from 'lucide-vue-next'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ref } from 'vue'
@@ -13,6 +13,19 @@ const store = useTransactionStore()
 const emit = defineEmits(['edit', 'add'])
 
 const activeTab = ref('list') // 'list' or 'ranking'
+const deletingId = ref(null)
+
+/**
+ * 处理删除操作
+ */
+const handleDelete = async (id) => {
+  if (deletingId.value) return
+  if (!confirm('确定要删除这条记录吗？')) return
+
+  deletingId.value = id
+  await store.deleteTransaction(id)
+  deletingId.value = null
+}
 
 /**
  * 格式化货币显示 (人民币)
@@ -293,11 +306,13 @@ const getIcon = (name) => {
                     <Edit2 :size="16" />
                   </button>
                   <button 
-                    @click="store.deleteTransaction(transaction.id)"
-                    class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                    @click="handleDelete(transaction.id)"
+                    :disabled="deletingId === transaction.id"
+                    class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     title="删除"
                   >
-                    <Trash2 :size="16" />
+                    <Loader2 v-if="deletingId === transaction.id" class="animate-spin" :size="16" />
+                    <Trash2 v-else :size="16" />
                   </button>
                 </div>
               </div>

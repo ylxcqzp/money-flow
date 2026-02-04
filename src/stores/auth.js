@@ -1,17 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import authApi from '@/api/auth'
+import { useNotificationStore } from './notification'
 
 export const useAuthStore = defineStore('auth', () => {
-  // 预设用户数据，尝试从本地存储恢复
-  const user = ref(JSON.parse(localStorage.getItem('money-flow-user')) || null)
-  
-  // 硬编码的测试账号
-  const TEST_ACCOUNT = {
-    email: 'demo@example.com',
-    password: 'password123',
-    name: 'Admin User',
-    avatar: 'https://ui-avatars.com/api/?name=Admin+User&background=0D9488&color=fff'
-  }
+  const token = ref(localStorage.getItem('money-flow-token') || '')
+  const userStr = localStorage.getItem('money-flow-user')
+  const user = ref(userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null)
+  const notificationStore = useNotificationStore()
 
   /**
    * 登录方法
@@ -19,20 +15,24 @@ export const useAuthStore = defineStore('auth', () => {
    * @param {string} password 
    */
   const login = async (email, password) => {
-    // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    if (email === TEST_ACCOUNT.email && password === TEST_ACCOUNT.password) {
-      user.value = {
-        email: TEST_ACCOUNT.email,
-        name: TEST_ACCOUNT.name,
-        avatar: TEST_ACCOUNT.avatar,
-        token: 'mock-token-' + Date.now()
-      }
+    try {
+      const res = await authApi.login({ email, password })
+      // 假设后端返回结构: { token, user }
+      // 如果是 { data: { token, user } } 请根据实际调整
+      const data = res.data || res
+      
+      token.value = data.token
+      user.value = data.user
+      
+      localStorage.setItem('money-flow-token', token.value)
       localStorage.setItem('money-flow-user', JSON.stringify(user.value))
+      
+      notificationStore.success('登录成功，欢迎回来！')
       return true
+    } catch (error) {
+      notificationStore.error(error.message || '登录失败，请检查邮箱和密码')
+      throw error
     }
-    throw new Error('邮箱或密码错误')
   }
 
   /**
@@ -42,33 +42,44 @@ export const useAuthStore = defineStore('auth', () => {
    * @param {string} name 
    */
   const register = async (email, password, name) => {
-    // 模拟注册延迟
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // 注册成功后直接登录
-    user.value = {
-      email,
-      name: name || email.split('@')[0],
-      avatar: `https://ui-avatars.com/api/?name=${name || email}&background=0D9488&color=fff`,
-      token: 'mock-token-' + Date.now()
+    try {
+      const res = await authApi.register({ email, password, username: name })
+      const data = res.data || res
+      
+      token.value = data.token
+      user.value = data.user
+      
+      localStorage.setItem('money-flow-token', token.value)
+      localStorage.setItem('money-flow-user', JSON.stringify(user.value))
+      
+      notificationStore.success('注册成功，欢迎加入 Money Flow！')
+      return true
+    } catch (error) {
+      notificationStore.error(error.message || '注册失败，请稍后重试')
+      throw error
     }
-    localStorage.setItem('money-flow-user', JSON.stringify(user.value))
-    return true
   }
 
   /**
    * 退出登录
    */
   const logout = () => {
+    // 可选：调用后端退出接口
+    // authApi.logout()
+    
+    token.value = ''
     user.value = null
+    localStorage.removeItem('money-flow-token')
     localStorage.removeItem('money-flow-user')
+    
+    notificationStore.info('已退出登录')
   }
 
   return {
+    token,
     user,
     login,
     register,
-    logout,
-    TEST_ACCOUNT
+    logout
   }
 })

@@ -15,6 +15,7 @@ const emit = defineEmits(['close', 'success'])
 // --- 状态与 Store ---
 
 const store = useTransactionStore()
+const isSubmitting = ref(false) // 提交状态
 
 // 表单响应式数据
 const formData = ref({
@@ -91,14 +92,19 @@ const frequencies = [
 /**
  * 提交表单逻辑
  */
-const handleSubmit = () => {
-  store.addRecurringTransaction({
+const handleSubmit = async () => {
+  isSubmitting.value = true
+  const success = await store.addRecurringTransaction({
     ...formData.value,
     amount: Number(formData.value.amount),
     startDate: new Date(formData.value.startDate).toISOString()
   })
-  emit('success')
-  emit('close')
+  isSubmitting.value = false
+  
+  if (success) {
+    emit('success')
+    emit('close')
+  }
 }
 </script>
 
@@ -254,9 +260,11 @@ const handleSubmit = () => {
               </button>
               <button 
                 type="submit"
-                class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-lg shadow-primary-200"
+                :disabled="isSubmitting"
+                class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-lg shadow-primary-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                确认设置
+                <div v-if="isSubmitting" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                {{ isSubmitting ? '保存中...' : '确认设置' }}
               </button>
             </div>
           </form>

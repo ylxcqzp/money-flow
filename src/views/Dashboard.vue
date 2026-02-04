@@ -5,6 +5,7 @@
  */
 import { useTransactionStore } from '../stores/transaction'
 import { useAuthStore } from '../stores/auth'
+import { useNotificationStore } from '../stores/notification'
 import StatsCard from '../components/StatsCard.vue'
 import TransactionForm from '../components/TransactionForm.vue'
 import TransactionList from '../components/TransactionList.vue'
@@ -19,9 +20,11 @@ import { useRouter } from 'vue-router'
 
 import { ref, computed, onMounted } from 'vue'
 import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } from 'date-fns'
+import { Loader2 } from 'lucide-vue-next'
 
 const store = useTransactionStore()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 
 // 弹窗显示状态控制
@@ -33,6 +36,7 @@ const showAccountManager = ref(false)    // 账户管理弹窗
 const showGoalsManager = ref(false)      // 储蓄目标弹窗
 const showUserMenu = ref(false)          // 用户菜单显示状态
 const editingTransaction = ref(null)     // 当前正在编辑的交易对象
+const deletingRecurringId = ref(null)    // 正在删除的周期账单ID
 
 /**
  * 退出登录
@@ -43,8 +47,8 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  // 页面加载时检查并生成到期的周期账单
-  store.checkAndGenerateRecurring()
+  // 初始化数据
+  store.initData()
   
   // 检查汇率更新
   const lastUpdate = store.lastExchangeRateUpdate
@@ -130,6 +134,18 @@ const getAccountIcon = (iconName) => {
   }
   return icons[iconName] || Wallet
 }
+
+/**
+ * 处理删除周期性账单
+ */
+const handleDeleteRecurring = async (id) => {
+  if (deletingRecurringId.value) return
+  if (!confirm('确定要删除这条周期性账单规则吗？')) return
+
+  deletingRecurringId.value = id
+  await store.deleteRecurringTransaction(id)
+  deletingRecurringId.value = null
+}
 </script>
 
 <template>
@@ -203,7 +219,7 @@ const getAccountIcon = (iconName) => {
         leave-to-class="opacity-0 scale-95"
       >
         <div 
-          v-for="n in store.notifications" 
+          v-for="n in notificationStore.notifications" 
           :key="n.id"
           class="pointer-events-auto bg-white/90 backdrop-blur-md border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 rounded-2xl flex items-start gap-4 group"
         >
@@ -222,7 +238,7 @@ const getAccountIcon = (iconName) => {
             <h4 class="text-sm font-bold text-slate-800 leading-tight">{{ n.type === 'success' ? '操作成功' : (n.type === 'error' ? '操作失败' : '系统提示') }}</h4>
             <p class="text-xs text-slate-500 mt-1 leading-relaxed">{{ n.message }}</p>
           </div>
-          <button @click="store.removeNotification(n.id)" class="text-slate-300 hover:text-slate-500 p-1 hover:bg-slate-50 rounded-lg transition-colors">
+          <button @click="notificationStore.removeNotification(n.id)" class="text-slate-300 hover:text-slate-500 p-1 hover:bg-slate-50 rounded-lg transition-colors">
             <X :size="16" />
           </button>
         </div>
@@ -598,10 +614,12 @@ const getAccountIcon = (iconName) => {
                       {{ rt.type === 'expense' ? '-' : '+' }}¥{{ rt.amount }}
                     </span>
                     <button 
-                      @click="store.deleteRecurringTransaction(rt.id)"
-                      class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-all"
+                      @click="handleDeleteRecurring(rt.id)"
+                      :disabled="deletingRecurringId === rt.id"
+                      class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-all disabled:opacity-100 disabled:cursor-not-allowed"
                     >
-                      <Trash2 :size="14" />
+                      <Loader2 v-if="deletingRecurringId === rt.id" class="animate-spin" :size="14" />
+                      <Trash2 v-else :size="14" />
                     </button>
                   </div>
                 </div>

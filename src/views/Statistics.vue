@@ -60,6 +60,12 @@ use([
 const router = useRouter();
 const store = useTransactionStore();
 
+onMounted(async () => {
+  if (store.transactions.length === 0 && !store.loading) {
+    await store.initData()
+  }
+})
+
 // --- 状态管理 ---
 const chartType = ref<'expense' | 'income'>('expense'); // 图表统计类型：支出/收入
 const drilldownCategoryId = ref<string | null>(null);   // 当前下钻的父分类ID

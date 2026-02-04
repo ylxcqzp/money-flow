@@ -16,6 +16,7 @@ const store = useTransactionStore()
 const emit = defineEmits(['close']) // 事件：关闭弹窗
 const editingId = ref(null)         // 当前正在编辑的账户 ID，null 表示新增模式
 const formRef = ref(null)           // 表单 DOM 引用，用于滚动定位
+const isSubmitting = ref(false)     // 提交状态
 
 // 表单响应式数据
 const newAccount = ref({
@@ -82,32 +83,42 @@ const resetForm = () => {
 /**
  * 处理添加账户逻辑
  */
-const handleAdd = () => {
+const handleAdd = async () => {
   if (!newAccount.value.name) return
-  store.addAccount({ ...newAccount.value })
-  store.addNotification(`成功添加账户: ${newAccount.value.name}`, 'success')
-  resetForm()
-  emit('close')
+  
+  isSubmitting.value = true
+  const success = await store.addAccount({ ...newAccount.value })
+  isSubmitting.value = false
+  
+  if (success) {
+    resetForm()
+    emit('close')
+  }
 }
 
 /**
  * 处理更新账户逻辑
  */
-const handleUpdate = () => {
+const handleUpdate = async () => {
   if (!newAccount.value.name) return
-  store.updateAccount(editingId.value, { ...newAccount.value })
-  store.addNotification(`账户 "${newAccount.value.name}" 已更新`, 'success')
-  resetForm()
-  emit('close')
+  
+  isSubmitting.value = true
+  const success = await store.updateAccount(editingId.value, { ...newAccount.value })
+  isSubmitting.value = false
+  
+  if (success) {
+    resetForm()
+    emit('close')
+  }
 }
 
 /**
  * 处理删除账户逻辑
  * @param {string} id 账户 ID
  */
-const handleDelete = (id) => {
+const handleDelete = async (id) => {
   if (confirm('确定要删除这个账户吗？如果该账户已有交易记录，将无法删除。')) {
-    store.deleteAccount(id)
+    await store.deleteAccount(id)
   }
 }
 </script>
@@ -249,10 +260,12 @@ const handleDelete = (id) => {
           </button>
           <button 
             @click="editingId ? handleUpdate() : handleAdd()"
-            class="flex-[2] py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+            :disabled="isSubmitting"
+            class="flex-[2] py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <component :is="editingId ? Save : Plus" :size="18" />
-            {{ editingId ? '保存修改' : '确认添加' }}
+            <component :is="isSubmitting ? 'div' : (editingId ? Save : Plus)" :size="18" :class="{ 'animate-spin': isSubmitting && !editingId && !Save }" />
+            <span v-if="isSubmitting">处理中...</span>
+            <span v-else>{{ editingId ? '保存修改' : '确认添加' }}</span>
           </button>
         </div>
       </div>

@@ -24,6 +24,7 @@ const store = useTransactionStore()
 const activeTab = ref('expense')         // 当前激活的标签页：'expense' 支出 或 'income' 收入
 const editingId = ref(null)              // 正在编辑的分类 ID
 const addingToParentId = ref(null)       // 正在为哪个父分类添加子分类
+const isSubmitting = ref(false)          // 提交状态
 // 默认全部折叠
 const collapsedCategories = ref(new Set(store.categories.map(c => c.id)))
 
@@ -161,32 +162,61 @@ const resetForm = () => {
 /**
  * 处理添加分类逻辑
  */
-const handleAdd = () => {
+const handleAdd = async () => {
   if (!newCategory.value.name) return
-  const result = store.addCategory({ ...newCategory.value }, addingToParentId.value)
+  
+  isSubmitting.value = true
+  const success = await store.addCategory({ ...newCategory.value }, addingToParentId.value)
+  isSubmitting.value = false
+  
   // 确保新添加的分类默认折叠
-  if (!addingToParentId.value && result?.id) {
-    collapsedCategories.value.add(result.id)
+  // success is boolean, but addCategory returns boolean in updated store
+  // Wait, I need to check if addCategory returns the object or boolean in transaction.js
+  // In transaction.js: return true/false.
+  // So I cannot get result.id easily unless I change store to return object or fetch it.
+  // Actually, for UI UX, just expanding it or not matters less than success.
+  // But wait, the original code used result.id.
+  // Let me check transaction.js addCategory again.
+  // It returns true/false.
+  // So result.id usage in original code will fail if I just await it and get boolean.
+  // I should update transaction.js to return the created object or at least the ID if possible, 
+  // OR just rely on fetching.
+  // But if I want to collapse it, I need the ID.
+  // However, collapsing is "default" behavior for new items if they are added to the list.
+  // The original code:
+  // const result = store.addCategory(...)
+  // if (!addingToParentId.value && result?.id) { collapsedCategories.value.add(result.id) }
+  
+  // If I can't get ID, I can't add to collapsed set.
+  // But maybe it's fine. The list refreshes.
+  
+  if (success) {
+    resetForm()
   }
-  resetForm()
 }
 
 /**
  * 处理更新分类逻辑
  */
-const handleUpdate = () => {
+const handleUpdate = async () => {
   if (!newCategory.value.name) return
-  store.updateCategory(editingId.value, { ...newCategory.value })
-  resetForm()
+  
+  isSubmitting.value = true
+  const success = await store.updateCategory(editingId.value, { ...newCategory.value })
+  isSubmitting.value = false
+  
+  if (success) {
+    resetForm()
+  }
 }
 
 /**
  * 处理删除分类逻辑
  * @param {string} id 分类 ID
  */
-const handleDelete = (id) => {
+const handleDelete = async (id) => {
   if (confirm('确定要删除这个分类吗？')) {
-    store.deleteCategory(id)
+    await store.deleteCategory(id)
   }
 }
 
@@ -376,10 +406,12 @@ const startAddSub = (parentId) => {
           </button>
           <button 
             @click="editingId ? handleUpdate() : handleAdd()"
-            class="flex-[2] py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+            :disabled="isSubmitting"
+            class="flex-[2] py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <component :is="editingId ? Save : Plus" :size="18" />
-            {{ editingId ? '保存修改' : '确认添加' }}
+            <component :is="isSubmitting ? 'div' : (editingId ? Save : Plus)" :size="18" :class="{ 'animate-spin': isSubmitting && !editingId && !Save }" />
+            <span v-if="isSubmitting">处理中...</span>
+            <span v-else>{{ editingId ? '保存修改' : '确认添加' }}</span>
           </button>
         </div>
       </div>

@@ -154,11 +154,12 @@ const selectSubCategory = (subCatId) => {
 }
 
 const formError = ref('')
+const isSubmitting = ref(false)
 
 /**
  * 提交表单
  */
-const handleSubmit = () => {
+const handleSubmit = async () => {
   formError.value = ''
   
   if (!form.value.amount) {
@@ -170,6 +171,8 @@ const handleSubmit = () => {
     formError.value = '请选择一个分类'
     return
   }
+
+  isSubmitting.value = true
   
   const originalAmount = Number(form.value.amount)
   const currency = form.value.currency
@@ -188,15 +191,20 @@ const handleSubmit = () => {
       : (store.convertAmount(originalAmount, currency) / originalAmount).toFixed(4)
   }
 
+  let success = false
   if (props.initialData) {
     // 编辑模式：调用更新方法
-    store.updateTransaction(props.initialData.id, payload)
+    success = await store.updateTransaction(props.initialData.id, payload)
   } else {
     // 新增模式：调用添加方法
-    store.addTransaction(payload)
+    success = await store.addTransaction(payload)
   }
   
-  emit('success') // 提交成功后通知父组件
+  isSubmitting.value = false
+
+  if (success) {
+    emit('success') // 提交成功后通知父组件
+  }
 }
 </script>
 

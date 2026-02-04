@@ -17,6 +17,7 @@ const store = useTransactionStore()
 const showAddForm = ref(false)
 const depositGoalId = ref(null) // 正在存款的目标 ID
 const depositAmount = ref('')   // 存款/取款金额
+const isSubmitting = ref(false) // 提交状态
 
 // 新目标表单数据
 const newGoal = ref({
@@ -85,20 +86,26 @@ const getRemainingTime = (deadline) => {
 /**
  * 处理添加目标
  */
-const handleAddGoal = () => {
+const handleAddGoal = async () => {
   if (!newGoal.value.name || !newGoal.value.targetAmount) return
-  store.addGoal({
+  
+  isSubmitting.value = true
+  const success = await store.addGoal({
     ...newGoal.value,
     targetAmount: Number(newGoal.value.targetAmount)
   })
-  resetForm()
-  showAddForm.value = false
+  isSubmitting.value = false
+  
+  if (success) {
+    resetForm()
+    showAddForm.value = false
+  }
 }
 
 /**
  * 处理更新进度 (存款/取款)
  */
-const handleUpdateProgress = (isDeposit = true) => {
+const handleUpdateProgress = async (isDeposit = true) => {
   if (!depositGoalId.value || !depositAmount.value) return
   const amountValue = Number(depositAmount.value)
   
@@ -111,9 +118,24 @@ const handleUpdateProgress = (isDeposit = true) => {
   }
 
   const amount = isDeposit ? amountValue : -amountValue
-  store.updateGoalProgress(depositGoalId.value, amount)
-  depositGoalId.value = null
-  depositAmount.value = ''
+  
+  isSubmitting.value = true
+  const success = await store.updateGoalProgress(depositGoalId.value, amount)
+  isSubmitting.value = false
+  
+  if (success) {
+    depositGoalId.value = null
+    depositAmount.value = ''
+  }
+}
+
+/**
+ * 处理删除目标
+ */
+const handleDeleteGoal = async (id) => {
+  if (confirm('确定要删除这个储蓄目标吗？')) {
+    await store.deleteGoal(id)
+  }
 }
 
 /**
@@ -214,10 +236,12 @@ const resetForm = () => {
 
       <button 
         @click="handleAddGoal"
-        class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-100 flex items-center justify-center gap-2"
+        :disabled="isSubmitting"
+        class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-100 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <Save :size="18" />
-        开启储蓄计划
+        <Save v-if="!isSubmitting" :size="18" />
+        <div v-else class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+        {{ isSubmitting ? '处理中...' : '开启储蓄计划' }}
       </button>
     </div>
 
@@ -247,7 +271,7 @@ const resetForm = () => {
                 </div>
               </div>
             </div>
-            <button @click="store.deleteGoal(goal.id)" class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+            <button @click="handleDeleteGoal(goal.id)" class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
               <Trash2 :size="16" />
             </button>
           </div>
