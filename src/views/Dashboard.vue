@@ -4,6 +4,7 @@
  * 项目主入口页面，包含收支统计、账单列表、账户管理、预算设置等核心功能
  */
 import { useTransactionStore } from '../stores/transaction'
+import { useAuthStore } from '../stores/auth'
 import StatsCard from '../components/StatsCard.vue'
 import TransactionForm from '../components/TransactionForm.vue'
 import TransactionList from '../components/TransactionList.vue'
@@ -13,13 +14,14 @@ import RecurringTransactionForm from '../components/RecurringTransactionForm.vue
 import CategoryManager from '../components/CategoryManager.vue'
 import AccountManager from '../components/AccountManager.vue'
 import GoalsManager from '../components/GoalsManager.vue'
-import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3, PieChart, Target, Scale, BellRing, RefreshCw } from 'lucide-vue-next'
+import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3, PieChart, Target, Scale, BellRing, RefreshCw, LogOut } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 import { ref, computed, onMounted } from 'vue'
 import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } from 'date-fns'
 
 const store = useTransactionStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
 // 弹窗显示状态控制
@@ -29,7 +31,16 @@ const showRecurringForm = ref(false)     // 周期账单表单弹窗
 const showCategoryManager = ref(false)   // 分类管理弹窗
 const showAccountManager = ref(false)    // 账户管理弹窗
 const showGoalsManager = ref(false)      // 储蓄目标弹窗
+const showUserMenu = ref(false)          // 用户菜单显示状态
 const editingTransaction = ref(null)     // 当前正在编辑的交易对象
+
+/**
+ * 退出登录
+ */
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 
 onMounted(() => {
   // 页面加载时检查并生成到期的周期账单
@@ -149,6 +160,34 @@ const getAccountIcon = (iconName) => {
             <Plus :size="20" />
             <span>记一笔</span>
           </button>
+
+          <!-- User Profile Dropdown -->
+          <div class="relative ml-2" v-if="authStore.user">
+            <button 
+              @click="showUserMenu = !showUserMenu"
+              class="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full border border-slate-200 hover:bg-slate-50 transition-all"
+            >
+              <span class="text-xs font-medium text-slate-700 ml-1 hidden sm:block">{{ authStore.user.name }}</span>
+              <img :src="authStore.user.avatar" alt="User" class="w-8 h-8 rounded-full bg-slate-100 object-cover" />
+            </button>
+            
+            <div v-if="showUserMenu" class="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+              <div class="px-4 py-3 border-b border-slate-50">
+                <p class="text-xs text-slate-500">登录账号</p>
+                <p class="text-sm font-bold text-slate-800 truncate">{{ authStore.user.email }}</p>
+              </div>
+              <button 
+                @click="handleLogout"
+                class="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+              >
+                <LogOut :size="16" />
+                退出登录
+              </button>
+            </div>
+            
+            <!-- Click outside handler overlay -->
+            <div v-if="showUserMenu" @click="showUserMenu = false" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
+          </div>
         </div>
       </div>
     </header>
@@ -421,10 +460,11 @@ const getAccountIcon = (iconName) => {
               </div>
               <button 
                 @click="store.fetchExchangeRates" 
-                class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all active:rotate-180 duration-500"
+                class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 title="手动刷新汇率"
+                :disabled="store.isFetchingRates"
               >
-                <RefreshCw :size="14" />
+                <RefreshCw :size="14" :class="{ 'animate-spin': store.isFetchingRates }" />
               </button>
             </div>
           </div>
@@ -614,120 +654,150 @@ const getAccountIcon = (iconName) => {
     </main>
 
     <!-- Modal Form -->
-    <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="closeForm"></div>
-      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
-        <!-- Header - 固定在顶部 -->
-        <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between shrink-0">
-          <h2 class="text-xl font-bold text-slate-800">{{ editingTransaction ? '修改账单' : '记一笔' }}</h2>
-          <button @click="closeForm" class="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-50 rounded-xl transition-colors">
-            <X :size="24" />
-          </button>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showForm" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]" @click="closeForm"></div>
+      </Transition>
+      <Transition name="modal">
+        <div v-if="showForm" class="fixed inset-0 z-[101] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+          <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl relative overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto">
+            <!-- Header - 固定在顶部 -->
+            <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between shrink-0">
+              <h2 class="text-xl font-bold text-slate-800">{{ editingTransaction ? '修改账单' : '记一笔' }}</h2>
+              <button @click="closeForm" class="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-50 rounded-xl transition-colors">
+                <X :size="24" />
+              </button>
+            </div>
+            
+            <!-- Content - 包含可滚动表单 -->
+            <div class="px-6 pb-6 pt-2 overflow-hidden flex-1 flex flex-col">
+              <TransactionForm :initial-data="editingTransaction" @success="handleFormSuccess" />
+            </div>
+          </div>
         </div>
-        
-        <!-- Content - 包含可滚动表单 -->
-        <div class="px-6 pb-6 pt-2 overflow-hidden flex-1 flex flex-col">
-          <TransactionForm :initial-data="editingTransaction" @success="handleFormSuccess" />
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Budget Setter Modal -->
-    <div v-if="showBudgetSetter" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showBudgetSetter = false"></div>
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
-        <div class="p-5">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-bold text-slate-800">设置预算</h2>
-            <button @click="showBudgetSetter = false" class="text-slate-400 hover:text-slate-600 p-1">
-              <X :size="20" />
-            </button>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showBudgetSetter" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]" @click="showBudgetSetter = false"></div>
+      </Transition>
+      <Transition name="modal">
+        <div v-if="showBudgetSetter" class="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden pointer-events-auto">
+            <div class="p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800">设置预算</h2>
+                <button @click="showBudgetSetter = false" class="text-slate-400 hover:text-slate-600 p-1">
+                  <X :size="20" />
+                </button>
+              </div>
+              <BudgetSetter @success="showBudgetSetter = false" />
+            </div>
           </div>
-          <BudgetSetter @success="showBudgetSetter = false" />
         </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Category Manager Modal -->
-    <div v-if="showCategoryManager" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showCategoryManager = false"></div>
-      <div class="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-        <!-- Modal Header (Fixed) -->
-        <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
-              <LayoutGrid :size="20" />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showCategoryManager" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110]" @click="showCategoryManager = false"></div>
+      </Transition>
+      <Transition name="modal">
+        <div v-if="showCategoryManager" class="fixed inset-0 z-[111] flex items-center justify-center p-4 pointer-events-none">
+          <div class="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[85vh] pointer-events-auto">
+            <!-- Modal Header (Fixed) -->
+            <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
+                  <LayoutGrid :size="20" />
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-slate-800">分类管理</h2>
+                  <p class="text-xs text-slate-400 mt-0.5">自定义您的收支类别</p>
+                </div>
+              </div>
+              <button @click="showCategoryManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X :size="20" class="text-slate-400" />
+              </button>
             </div>
-            <div>
-              <h2 class="text-xl font-bold text-slate-800">分类管理</h2>
-              <p class="text-xs text-slate-400 mt-0.5">自定义您的收支类别</p>
+            
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+              <CategoryManager />
             </div>
           </div>
-          <button @click="showCategoryManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X :size="20" class="text-slate-400" />
-          </button>
         </div>
-        
-        <!-- Modal Content (Scrollable) -->
-        <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-          <CategoryManager />
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Account Manager Modal -->
-    <div v-if="showAccountManager" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showAccountManager = false"></div>
-      <div class="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-        <!-- Modal Header (Fixed) -->
-        <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
-              <Wallet :size="20" />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showAccountManager" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110]" @click="showAccountManager = false"></div>
+      </Transition>
+      <Transition name="modal">
+        <div v-if="showAccountManager" class="fixed inset-0 z-[111] flex items-center justify-center p-4 pointer-events-none">
+          <div class="bg-white rounded-[32px] w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[85vh] pointer-events-auto">
+            <!-- Modal Header (Fixed) -->
+            <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
+                  <Wallet :size="20" />
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-slate-800">账户管理</h2>
+                  <p class="text-xs text-slate-400 mt-0.5">管理您的资产账户与初始余额</p>
+                </div>
+              </div>
+              <button @click="showAccountManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X :size="20" class="text-slate-400" />
+              </button>
             </div>
-            <div>
-              <h2 class="text-xl font-bold text-slate-800">账户管理</h2>
-              <p class="text-xs text-slate-400 mt-0.5">管理您的资产账户与初始余额</p>
+            
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+              <AccountManager @close="showAccountManager = false" />
             </div>
           </div>
-          <button @click="showAccountManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X :size="20" class="text-slate-400" />
-          </button>
         </div>
-        
-        <!-- Modal Content (Scrollable) -->
-        <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-          <AccountManager @close="showAccountManager = false" />
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Goals Manager Modal -->
-    <div v-if="showGoalsManager" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showGoalsManager = false"></div>
-      <div class="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-        <!-- Modal Header (Fixed) -->
-        <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
-              <Target :size="20" />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showGoalsManager" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[110]" @click="showGoalsManager = false"></div>
+      </Transition>
+      <Transition name="modal">
+        <div v-if="showGoalsManager" class="fixed inset-0 z-[111] flex items-center justify-center p-4 pointer-events-none">
+          <div class="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto">
+            <!-- Modal Header (Fixed) -->
+            <div class="px-8 pt-8 pb-4 flex items-center justify-between bg-white border-b border-slate-50 relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-600">
+                  <Target :size="20" />
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-slate-800">储蓄目标追踪</h2>
+                  <p class="text-xs text-slate-400 mt-0.5">为梦想攒下每一分钱</p>
+                </div>
+              </div>
+              <button @click="showGoalsManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X :size="20" class="text-slate-400" />
+              </button>
             </div>
-            <div>
-              <h2 class="text-xl font-bold text-slate-800">储蓄目标追踪</h2>
-              <p class="text-xs text-slate-400 mt-0.5">为梦想攒下每一分钱</p>
+            
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+              <GoalsManager />
             </div>
           </div>
-          <button @click="showGoalsManager = false" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X :size="20" class="text-slate-400" />
-          </button>
         </div>
-        
-        <!-- Modal Content (Scrollable) -->
-        <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-          <GoalsManager />
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Recurring Transaction Modal -->
     <RecurringTransactionForm 

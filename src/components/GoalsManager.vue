@@ -309,37 +309,39 @@ const resetForm = () => {
           </div>
 
           <!-- 存入金额弹出层 -->
-          <div v-if="depositGoalId === goal.id" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-200">
-            <button @click="depositGoalId = null" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
-              <X :size="16" />
-            </button>
-            
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">存入/取出金额 (¥)</p>
-            <input 
-              v-model="depositAmount"
-              type="number"
-              autoFocus
-              placeholder="0.00"
-              class="w-full bg-transparent border-b-2 border-primary-500 outline-none text-3xl font-black text-center text-slate-800 pb-2 mb-6 placeholder:text-slate-200"
-            />
-            
-            <div class="flex gap-3 w-full">
-              <button 
-                @click="handleUpdateProgress(false)"
-                class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <ArrowDownCircle :size="18" />
-                取出
+          <Transition name="modal">
+            <div v-if="depositGoalId === goal.id" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6">
+              <button @click="depositGoalId = null" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
+                <X :size="16" />
               </button>
-              <button 
-                @click="handleUpdateProgress(true)"
-                class="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
-              >
-                <ArrowUpCircle :size="18" />
-                存入
-              </button>
+              
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">存入/取出金额 (¥)</p>
+              <input 
+                v-model="depositAmount"
+                type="number"
+                autoFocus
+                placeholder="0.00"
+                class="w-full bg-transparent border-b-2 border-primary-500 outline-none text-3xl font-black text-center text-slate-800 pb-2 mb-6 placeholder:text-slate-200"
+              />
+              
+              <div class="flex gap-3 w-full">
+                <button 
+                  @click="handleUpdateProgress(false)"
+                  class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <ArrowDownCircle :size="18" />
+                  取出
+                </button>
+                <button 
+                  @click="handleUpdateProgress(true)"
+                  class="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
+                >
+                  <ArrowUpCircle :size="18" />
+                  存入
+                </button>
+              </div>
             </div>
-          </div>
+          </Transition>
         </div>
       </div>
     </div>

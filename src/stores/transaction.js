@@ -30,6 +30,7 @@ export const useTransactionStore = defineStore('transaction', () => {
   const exchangeRates = ref(JSON.parse(localStorage.getItem('exchangeRates') || '{"CNY": 1, "USD": 0.14, "EUR": 0.13, "JPY": 20.5, "HKD": 1.09}'))
   const baseCurrency = ref('CNY')
   const lastExchangeRateUpdate = ref(localStorage.getItem('lastExchangeRateUpdate') || '')
+  const isFetchingRates = ref(false) // 正在获取汇率的状态
 
   // 默认账户配置
   const defaultAccounts = [
@@ -411,6 +412,8 @@ export const useTransactionStore = defineStore('transaction', () => {
    * 获取最新汇率数据 (调用 exchangerate-api)
    */
   async function fetchExchangeRates() {
+    if (isFetchingRates.value) return
+    isFetchingRates.value = true
     try {
       const response = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency.value}`)
       const data = await response.json()
@@ -426,6 +429,8 @@ export const useTransactionStore = defineStore('transaction', () => {
     } catch (error) {
       console.error('Fetch exchange rates error:', error)
       addNotification('获取汇率失败，请检查网络连接', 'error')
+    } finally {
+      isFetchingRates.value = false
     }
   }
 
@@ -896,6 +901,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     exchangeRates,
     baseCurrency,
     lastExchangeRateUpdate,
+    isFetchingRates,
     
     // 交易操作
     addTransaction,

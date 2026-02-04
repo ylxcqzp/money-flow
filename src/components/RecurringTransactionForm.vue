@@ -103,157 +103,165 @@ const handleSubmit = () => {
 </script>
 
 <template>
-  <!-- 弹窗遮罩层 -->
-  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <Teleport to="body">
+    <!-- 弹窗遮罩层 -->
+    <Transition name="fade" appear>
+      <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100]" @click="emit('close')"></div>
+    </Transition>
+
     <!-- 弹窗主体 -->
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-      <!-- 头部 -->
-      <div class="px-6 py-4 border-b flex items-center justify-between bg-slate-50">
-        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <Repeat class="text-primary-500" :size="20" />
-          设置周期账单
-        </h3>
-        <button @click="emit('close')" class="text-slate-400 hover:text-slate-600 transition-colors">
-          <X :size="20" />
-        </button>
+    <Transition name="modal" appear>
+      <div class="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden pointer-events-auto">
+          <!-- 头部 -->
+          <div class="px-6 py-4 border-b flex items-center justify-between bg-slate-50">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Repeat class="text-primary-500" :size="20" />
+              设置周期账单
+            </h3>
+            <button @click="emit('close')" class="text-slate-400 hover:text-slate-600 transition-colors">
+              <X :size="20" />
+            </button>
+          </div>
+
+          <!-- 表单主体 -->
+          <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
+            <!-- 类型切换：支出/收入 -->
+            <div class="grid grid-cols-2 gap-4 p-1 bg-slate-100 rounded-xl">
+              <button 
+                type="button"
+                @click="handleTypeChange('expense')"
+                :class="[
+                  'py-2 rounded-lg text-sm font-medium transition-all',
+                  formData.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                ]"
+              >
+                支出
+              </button>
+              <button 
+                type="button"
+                @click="handleTypeChange('income')"
+                :class="[
+                  'py-2 rounded-lg text-sm font-medium transition-all',
+                  formData.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                ]"
+              >
+                收入
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              <!-- 描述输入 -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">描述</label>
+                <div class="relative">
+                  <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                  <input 
+                    v-model="formData.description"
+                    type="text" 
+                    required
+                    placeholder="例如：每月房租、Netflix订阅"
+                    class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                  >
+                </div>
+              </div>
+
+              <!-- 金额与分类 -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">金额</label>
+                  <div class="relative">
+                    <DollarSign class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                    <input 
+                      v-model="formData.amount"
+                      type="number" 
+                      step="0.01"
+                      required
+                      placeholder="0.00"
+                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">分类</label>
+                  <div class="relative">
+                    <Tag class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                    <select 
+                      :value="formData.subCategoryId || formData.categoryId"
+                      @change="handleCategoryChange"
+                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none text-sm"
+                    >
+                      <option value="" disabled>选择分类</option>
+                      <option v-for="cat in flatCategories" :key="cat.id" :value="cat.id">
+                        {{ cat.name }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 频率与日期 -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">重复频率</label>
+                  <div class="relative">
+                    <Repeat class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                    <select 
+                      v-model="formData.frequency"
+                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
+                    >
+                      <option v-for="freq in frequencies" :key="freq.value" :value="freq.value">{{ freq.label }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">开始日期</label>
+                  <div class="relative">
+                    <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                    <input 
+                      v-model="formData.startDate"
+                      type="date" 
+                      required
+                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- 结算账户选择 -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">结算账户</label>
+                <div class="relative">
+                  <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
+                  <select 
+                    v-model="formData.accountId"
+                    class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
+                  >
+                    <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 表单操作按钮 -->
+            <div class="pt-4 flex gap-3">
+              <button 
+                type="button"
+                @click="emit('close')"
+                class="flex-1 px-4 py-2 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                type="submit"
+                class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-lg shadow-primary-200"
+              >
+                确认设置
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-
-      <!-- 表单主体 -->
-      <form @submit.prevent="handleSubmit" class="p-6 space-y-4">
-        <!-- 类型切换：支出/收入 -->
-        <div class="grid grid-cols-2 gap-4 p-1 bg-slate-100 rounded-xl">
-          <button 
-            type="button"
-            @click="handleTypeChange('expense')"
-            :class="[
-              'py-2 rounded-lg text-sm font-medium transition-all',
-              formData.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            ]"
-          >
-            支出
-          </button>
-          <button 
-            type="button"
-            @click="handleTypeChange('income')"
-            :class="[
-              'py-2 rounded-lg text-sm font-medium transition-all',
-              formData.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            ]"
-          >
-            收入
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <!-- 描述输入 -->
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">描述</label>
-            <div class="relative">
-              <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-              <input 
-                v-model="formData.description"
-                type="text" 
-                required
-                placeholder="例如：每月房租、Netflix订阅"
-                class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
-              >
-            </div>
-          </div>
-
-          <!-- 金额与分类 -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">金额</label>
-              <div class="relative">
-                <DollarSign class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                <input 
-                  v-model="formData.amount"
-                  type="number" 
-                  step="0.01"
-                  required
-                  placeholder="0.00"
-                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
-                >
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">分类</label>
-              <div class="relative">
-                <Tag class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                <select 
-                  :value="formData.subCategoryId || formData.categoryId"
-                  @change="handleCategoryChange"
-                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none text-sm"
-                >
-                  <option value="" disabled>选择分类</option>
-                  <option v-for="cat in flatCategories" :key="cat.id" :value="cat.id">
-                    {{ cat.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- 频率与日期 -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">重复频率</label>
-              <div class="relative">
-                <Repeat class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                <select 
-                  v-model="formData.frequency"
-                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
-                >
-                  <option v-for="freq in frequencies" :key="freq.value" :value="freq.value">{{ freq.label }}</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">开始日期</label>
-              <div class="relative">
-                <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                <input 
-                  v-model="formData.startDate"
-                  type="date" 
-                  required
-                  class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- 结算账户选择 -->
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">结算账户</label>
-            <div class="relative">
-              <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-              <select 
-                v-model="formData.accountId"
-                class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
-              >
-                <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- 表单操作按钮 -->
-        <div class="pt-4 flex gap-3">
-          <button 
-            type="button"
-            @click="emit('close')"
-            class="flex-1 px-4 py-2 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            取消
-          </button>
-          <button 
-            type="submit"
-            class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-lg shadow-primary-200"
-          >
-            确认设置
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>

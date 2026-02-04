@@ -239,8 +239,13 @@ const handleSubmit = () => {
             <label class="block text-sm font-bold text-slate-700">金额</label>
             <div v-if="form.currency !== store.baseCurrency" class="text-[10px] text-slate-400 flex items-center gap-1">
               汇率按当前数据计算
-              <button type="button" @click="store.fetchExchangeRates" class="hover:text-primary-500 transition-colors">
-                <RefreshCw :size="10" />
+              <button 
+                type="button" 
+                @click="store.fetchExchangeRates" 
+                class="hover:text-primary-500 transition-colors disabled:opacity-50"
+                :disabled="store.isFetchingRates"
+              >
+                <RefreshCw :size="10" :class="{ 'animate-spin': store.isFetchingRates }" />
               </button>
             </div>
           </div>

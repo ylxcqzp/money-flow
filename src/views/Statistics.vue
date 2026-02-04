@@ -466,8 +466,9 @@ const exportToExcel = () => {
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- 筛选面板 -->
-      <div v-if="showFilterPanel" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <Transition name="slide-down">
+        <div v-if="showFilterPanel" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <!-- 时间范围 -->
           <div>
             <label class="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -538,6 +539,7 @@ const exportToExcel = () => {
           </button>
         </div>
       </div>
+      </Transition>
 
       <!-- 报表导出内容区域 -->
       <div id="report-content" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
