@@ -614,16 +614,19 @@ const getAccountIcon = (iconName) => {
     </main>
 
     <!-- Modal Form -->
-    <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="closeForm"></div>
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative z-10 overflow-hidden">
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-slate-800">{{ editingTransaction ? '修改账单' : '记一笔' }}</h2>
-            <button @click="closeForm" class="text-slate-400 hover:text-slate-600 p-1">
-              <X :size="24" />
-            </button>
-          </div>
+      <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+        <!-- Header - 固定在顶部 -->
+        <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between shrink-0">
+          <h2 class="text-xl font-bold text-slate-800">{{ editingTransaction ? '修改账单' : '记一笔' }}</h2>
+          <button @click="closeForm" class="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-50 rounded-xl transition-colors">
+            <X :size="24" />
+          </button>
+        </div>
+        
+        <!-- Content - 包含可滚动表单 -->
+        <div class="px-6 pb-6 pt-2 overflow-hidden flex-1 flex flex-col">
           <TransactionForm :initial-data="editingTransaction" @success="handleFormSuccess" />
         </div>
       </div>

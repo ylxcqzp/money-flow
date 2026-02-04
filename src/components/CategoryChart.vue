@@ -21,6 +21,8 @@ const store = useTransactionStore()
  */
 const chartData = computed(() => {
   const categorySums = {}
+  let totalSpending = 0
+  
   store.filteredTransactions
     .filter(t => t.type === 'expense')
     .forEach(t => {
@@ -28,11 +30,19 @@ const chartData = computed(() => {
       const parentCat = store.findCategoryById(t.categoryId)
       const catName = parentCat?.name || t.category || '未分类'
       // 累加金额
-      categorySums[catName] = (categorySums[catName] || 0) + Number(t.amount)
+      const amount = Number(t.amount)
+      categorySums[catName] = (categorySums[catName] || 0) + amount
+      totalSpending += amount
     })
 
+  const labels = Object.keys(categorySums).map(name => {
+    const amount = categorySums[name]
+    const percentage = totalSpending > 0 ? ((amount / totalSpending) * 100).toFixed(1) : 0
+    return `${name} ${percentage}%`
+  })
+
   return {
-    labels: Object.keys(categorySums),
+    labels,
     datasets: [
       {
         // 预定义的一组柔和色彩

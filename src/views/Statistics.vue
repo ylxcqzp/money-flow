@@ -42,6 +42,7 @@ import {
 // PDF 导出依赖
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
+import * as XLSX from 'xlsx';
 
 // 注册 ECharts 必须的组件
 use([
@@ -173,26 +174,42 @@ const pieChartOption = computed(() => {
 
   return {
     title: {
-      text: drilldownCategoryId.value 
-        ? `${getCategoryName(drilldownCategoryId.value)} - 子类分布` 
-        : `${chartType.value === 'expense' ? '支出' : '收入'}分类占比`,
-      left: 'center',
-      top: 20,
-      textStyle: { color: '#334155', fontWeight: '600' }
-    },
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', left: 'left', top: 'middle', padding: [0, 0, 0, 20] },
-    series: [{
-      name: '分类金额',
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
-      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-      label: { show: false, position: 'center' },
-      emphasis: { label: { show: true, fontSize: 20, fontWeight: 'bold' } },
-      labelLine: { show: false },
-      data: data
-    }]
+        text: drilldownCategoryId.value 
+          ? `${getCategoryName(drilldownCategoryId.value)} - 子类分布` 
+          : `${chartType.value === 'expense' ? '支出' : '收入'}分类占比`,
+        left: 'center',
+        top: 20,
+        textStyle: { color: '#334155', fontWeight: '600' }
+      },
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { show: false }, // 隐藏图例，因为标签已经包含了所有信息
+      series: [{
+        name: '分类金额',
+        type: 'pie',
+        radius: ['35%', '60%'], // 稍微缩小饼图半径，为外部标签留出更多空间
+        avoidLabelOverlap: true,
+        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+        label: { 
+          show: true, 
+          position: 'outside',
+          formatter: '{b}: {d}%',
+          color: '#475569',
+          fontSize: 12
+        },
+        emphasis: { 
+          label: { 
+            show: true, 
+            fontSize: 16, 
+            fontWeight: 'bold' 
+          } 
+        },
+        labelLine: { 
+          show: true,
+          length: 15,
+          length2: 10
+        },
+        data: data
+      }]
   };
 });
 
@@ -333,12 +350,73 @@ const exportToPDF = async () => {
     const fileName = `财务报表_${filterStartDate.value}_至_${filterEndDate.value}.pdf`;
     pdf.save(fileName);
     
-    store.addNotification('报表已生成！请查看浏览器的“下载”文件夹', 'success');
-  } catch (error: any) {
-    console.error('PDF 导出失败:', error);
-    store.addNotification(`报表生成失败: ${error.message || '未知错误'}`, 'error');
+    store.addNotification('PDF 报表导出成功', 'success');
+  } catch (error) {
+    console.error('PDF Export Error:', error);
+    store.addNotification('导出失败，请重试', 'error');
   } finally {
     isExporting.value = false;
+  }
+};
+
+/**
+ * 导出账单数据到 Excel
+ * 将当前筛选后的交易记录转换为 Excel 表格并下载
+ */
+const isExportingExcel = ref(false);
+const exportToExcel = () => {
+  if (isExportingExcel.value) return;
+  if (filteredData.value.length === 0) {
+    store.addNotification('当前筛选条件下无数据可导出', 'warning');
+    return;
+  }
+
+  isExportingExcel.value = true;
+  store.addNotification('正在准备 Excel 数据...', 'info');
+
+  try {
+    // 准备 Excel 表头和数据映射
+    const excelData = filteredData.value.map(t => ({
+      '日期': format(parseISO(t.date), 'yyyy-MM-dd HH:mm'),
+      '类型': t.type === 'income' ? '收入' : (t.type === 'expense' ? '支出' : '转账'),
+      '分类': getCategoryName(t.categoryId),
+      '子分类': t.subCategoryId ? getCategoryName(t.subCategoryId) : '-',
+      '说明': t.description || '-',
+      '账户': store.accounts.find(a => a.id === (t.accountId || '1'))?.name || '默认账户',
+      '金额': Number(t.amount).toFixed(2),
+      '标签': t.tags ? t.tags.join(', ') : '-'
+    }));
+
+    // 创建工作表
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 18 }, // 日期
+      { wch: 8 },  // 类型
+      { wch: 12 }, // 分类
+      { wch: 12 }, // 子分类
+      { wch: 25 }, // 说明
+      { wch: 15 }, // 账户
+      { wch: 12 }, // 金额
+      { wch: 20 }  // 标签
+    ];
+    worksheet['!cols'] = colWidths;
+
+    // 创建工作簿并添加工作表
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '账单明细');
+
+    // 生成文件名并下载
+    const fileName = `账单明细_${filterStartDate.value}_至_${filterEndDate.value}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    store.addNotification('Excel 导出成功', 'success');
+  } catch (error) {
+    console.error('Excel Export Error:', error);
+    store.addNotification('导出 Excel 失败，请重试', 'error');
+  } finally {
+    isExportingExcel.value = false;
   }
 };
 </script>
@@ -365,9 +443,18 @@ const exportToPDF = async () => {
             高级筛选
           </button>
           <button 
+            @click="exportToExcel"
+            :disabled="isExportingExcel"
+            class="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download v-if="!isExportingExcel" :size="18" />
+            <div v-else class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            导出 Excel
+          </button>
+          <button 
             @click="exportToPDF"
             :disabled="isExporting"
-            class="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download v-if="!isExporting" :size="18" />
             <div v-else class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

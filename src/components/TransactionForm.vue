@@ -201,232 +201,237 @@ const handleSubmit = () => {
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-    <!-- Type Switcher -->
-    <div class="md:col-span-2 flex p-1.5 bg-slate-100 rounded-2xl mb-2">
-      <button 
-        type="button"
-        @click="form.type = 'expense'; form.categoryId = ''; form.subCategoryId = ''"
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
-        :class="form.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-      >
-        支出
-      </button>
-      <button 
-        type="button"
-        @click="form.type = 'income'; form.categoryId = ''; form.subCategoryId = ''"
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
-        :class="form.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-      >
-        收入
-      </button>
-      <button 
-        type="button"
-        @click="form.type = 'transfer'; form.categoryId = ''; form.subCategoryId = ''"
-        class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
-        :class="form.type === 'transfer' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-      >
-        转账
-      </button>
-    </div>
-
-    <!-- Amount & Currency -->
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <label class="block text-sm font-bold text-slate-700">金额</label>
-        <div v-if="form.currency !== store.baseCurrency" class="text-[10px] text-slate-400 flex items-center gap-1">
-          汇率按当前数据计算
-          <button type="button" @click="store.fetchExchangeRates" class="hover:text-primary-500 transition-colors">
-            <RefreshCw :size="10" />
+  <form @submit.prevent="handleSubmit" class="flex flex-col max-h-[calc(90vh-120px)]">
+    <!-- 可滚动区域 -->
+    <div class="flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 pb-4">
+        <!-- Type Switcher -->
+        <div class="md:col-span-2 flex p-1.5 bg-slate-100 rounded-2xl mb-2">
+          <button 
+            type="button"
+            @click="form.type = 'expense'; form.categoryId = ''; form.subCategoryId = ''"
+            class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
+            :class="form.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          >
+            支出
+          </button>
+          <button 
+            type="button"
+            @click="form.type = 'income'; form.categoryId = ''; form.subCategoryId = ''"
+            class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
+            :class="form.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          >
+            收入
+          </button>
+          <button 
+            type="button"
+            @click="form.type = 'transfer'; form.categoryId = ''; form.subCategoryId = ''"
+            class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
+            :class="form.type === 'transfer' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+          >
+            转账
           </button>
         </div>
-      </div>
-      <div class="flex gap-2">
-        <!-- Currency Selector -->
-        <div class="w-24 shrink-0 relative">
+
+        <!-- Amount & Currency -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-bold text-slate-700">金额</label>
+            <div v-if="form.currency !== store.baseCurrency" class="text-[10px] text-slate-400 flex items-center gap-1">
+              汇率按当前数据计算
+              <button type="button" @click="store.fetchExchangeRates" class="hover:text-primary-500 transition-colors">
+                <RefreshCw :size="10" />
+              </button>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <!-- Currency Selector -->
+            <div class="w-24 shrink-0 relative">
+              <select 
+                v-model="form.currency"
+                class="w-full h-12 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat"
+              >
+                <option v-for="c in currencies" :key="c.code" :value="c.code">
+                  {{ c.code }}
+                </option>
+              </select>
+            </div>
+            <!-- Amount Input -->
+            <div class="relative flex-1">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">{{ currentCurrencySymbol }}</span>
+              <input 
+                v-model="form.amount"
+                type="number" 
+                step="0.01"
+                required
+                placeholder="0.00"
+                class="w-full pl-9 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-xl font-bold"
+              />
+            </div>
+          </div>
+          <!-- Conversion Preview -->
+          <div v-if="convertedAmount !== null" class="flex items-center gap-2 px-3 py-2 bg-primary-50/50 rounded-lg border border-primary-100/50 animate-in fade-in slide-in-from-top-1 duration-200">
+            <span class="text-xs text-primary-600 font-medium flex items-center gap-1">
+              <ChevronRight :size="12" />
+              约合人民币：<span class="text-sm font-bold">¥ {{ convertedAmount }}</span>
+            </span>
+            <span class="text-[10px] text-primary-400 ml-auto">
+              1 {{ form.currency }} ≈ {{ (convertedAmount / Number(form.amount)).toFixed(4) }} CNY
+            </span>
+          </div>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="space-y-2">
+          <label class="block text-sm font-bold text-slate-700">日期</label>
+          <div class="relative">
+            <Calendar :size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              v-model="form.date"
+              type="date" 
+              required
+              class="w-full pl-11 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none"
+            />
+          </div>
+        </div>
+
+        <!-- Account -->
+        <div v-if="form.type !== 'transfer'" class="space-y-2">
+          <label class="block text-sm font-bold text-slate-700">账户</label>
           <select 
-            v-model="form.currency"
-            class="w-full h-12 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat"
+            v-model="form.accountId"
+            required
+            class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"
           >
-            <option v-for="c in currencies" :key="c.code" :value="c.code">
-              {{ c.code }}
+            <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
+              {{ acc.name }}
             </option>
           </select>
         </div>
-        <!-- Amount Input -->
-        <div class="relative flex-1">
-          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">{{ currentCurrencySymbol }}</span>
+
+        <!-- Transfer Accounts -->
+        <div v-else class="grid grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="block text-sm font-bold text-slate-700">转出</label>
+            <select 
+              v-model="form.fromAccountId"
+              required
+              class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+            >
+              <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
+                {{ acc.name }}
+              </option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-sm font-bold text-slate-700">转入</label>
+            <select 
+              v-model="form.toAccountId"
+              required
+              class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+            >
+              <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
+                {{ acc.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="space-y-2">
+          <label class="block text-sm font-bold text-slate-700">备注 <span class="text-slate-400 font-normal">(选填)</span></label>
           <input 
-            v-model="form.amount"
-            type="number" 
-            step="0.01"
-            required
-            placeholder="0.00"
-            class="w-full pl-9 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-xl font-bold"
+            v-model="form.description"
+            type="text" 
+            placeholder="想记点什么？"
+            class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base"
           />
         </div>
-      </div>
-      <!-- Conversion Preview -->
-      <div v-if="convertedAmount !== null" class="flex items-center gap-2 px-3 py-2 bg-primary-50/50 rounded-lg border border-primary-100/50 animate-in fade-in slide-in-from-top-1 duration-200">
-        <span class="text-xs text-primary-600 font-medium flex items-center gap-1">
-          <ChevronRight :size="12" />
-          约合人民币：<span class="text-sm font-bold">¥ {{ convertedAmount }}</span>
-        </span>
-        <span class="text-[10px] text-primary-400 ml-auto">
-          1 {{ form.currency }} ≈ {{ (convertedAmount / Number(form.amount)).toFixed(4) }} CNY
-        </span>
-      </div>
-    </div>
 
-    <!-- Date Selection -->
-    <div class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700">日期</label>
-      <div class="relative">
-        <Calendar :size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input 
-          v-model="form.date"
-          type="date" 
-          required
-          class="w-full pl-11 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none"
-        />
-      </div>
-    </div>
+        <!-- Tags -->
+        <div class="space-y-2">
+          <label class="block text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <TagIcon :size="16" class="text-slate-400" />
+            标签
+          </label>
+          
+          <div class="relative">
+            <input 
+              v-model="tagInput"
+              @keydown.enter.prevent="addTag"
+              @blur="addTag"
+              type="text" 
+              placeholder="按回车确认"
+              class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm placeholder:text-slate-300"
+            />
+          </div>
+        </div>
 
-    <!-- Account -->
-    <div v-if="form.type !== 'transfer'" class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700">账户</label>
-      <select 
-        v-model="form.accountId"
-        required
-        class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"
-      >
-        <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-          {{ acc.name }}
-        </option>
-      </select>
-    </div>
-
-    <!-- Transfer Accounts -->
-    <div v-else class="grid grid-cols-2 gap-4">
-      <div class="space-y-2">
-        <label class="block text-sm font-bold text-slate-700">转出</label>
-        <select 
-          v-model="form.fromAccountId"
-          required
-          class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-        >
-          <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-            {{ acc.name }}
-          </option>
-        </select>
-      </div>
-      <div class="space-y-2">
-        <label class="block text-sm font-bold text-slate-700">转入</label>
-        <select 
-          v-model="form.toAccountId"
-          required
-          class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-        >
-          <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-            {{ acc.name }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Description -->
-    <div class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700">备注 <span class="text-slate-400 font-normal">(选填)</span></label>
-      <input 
-        v-model="form.description"
-        type="text" 
-        placeholder="想记点什么？"
-        class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base"
-      />
-    </div>
-
-    <!-- Tags -->
-    <div class="space-y-2">
-      <label class="block text-sm font-bold text-slate-700 flex items-center gap-1.5">
-        <TagIcon :size="16" class="text-slate-400" />
-        标签
-      </label>
-      
-      <div class="relative">
-        <input 
-          v-model="tagInput"
-          @keydown.enter.prevent="addTag"
-          @blur="addTag"
-          type="text" 
-          placeholder="按回车确认"
-          class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm placeholder:text-slate-300"
-        />
-      </div>
-    </div>
-
-    <!-- Selected Tags Display (Full width) -->
-    <div v-if="form.tags.length > 0" class="md:col-span-2 flex flex-wrap gap-2 mt-[-4px]">
-      <span 
-        v-for="(tag, index) in form.tags" 
-        :key="index"
-        class="flex items-center gap-1.5 px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold border border-primary-100"
-      >
-        #{{ tag }}
-        <button @click="removeTag(index)" type="button" class="hover:text-primary-800">
-          <X :size="12" />
-        </button>
-      </span>
-    </div>
-
-    <!-- Category (Full width) -->
-    <div v-if="form.type !== 'transfer'" class="md:col-span-2 space-y-3 mt-2">
-      <div class="flex items-center justify-between">
-        <label class="block text-sm font-bold text-slate-700">分类 <span class="text-rose-500">*</span></label>
-        <span v-if="formError === '请选择一个分类'" class="text-xs font-bold text-rose-500 animate-pulse">请选择一个分类</span>
-      </div>
-      
-      <!-- Parent Categories -->
-      <div 
-        class="grid grid-cols-4 sm:grid-cols-8 gap-3 p-1 rounded-2xl transition-all"
-        :class="{ 'ring-2 ring-rose-500/20 bg-rose-50/10': formError === '请选择一个分类' }"
-      >
-        <button 
-          v-for="cat in filteredCategories" 
-          :key="cat.id"
-          type="button"
-          @click="selectCategory(cat.id)"
-          class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 transition-all"
-          :class="form.categoryId === cat.id 
-            ? 'bg-primary-50 border-primary-500 text-primary-600 shadow-sm' 
-            : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50 hover:border-slate-200'"
-        >
-          <component :is="getIcon(cat.icon)" :size="20" />
-          <span class="text-xs font-bold">{{ cat.name }}</span>
-        </button>
-      </div>
-
-      <!-- Sub Categories -->
-      <div v-if="selectedCategory?.children?.length" class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-        <div class="flex flex-wrap gap-2.5">
-          <button 
-            v-for="sub in selectedCategory.children" 
-            :key="sub.id"
-            type="button"
-            @click="selectSubCategory(sub.id)"
-            class="px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all flex items-center gap-1.5"
-            :class="form.subCategoryId === sub.id 
-              ? 'bg-white border-primary-500 text-primary-600 shadow-sm' 
-              : 'bg-transparent border-transparent text-slate-500 hover:bg-white hover:border-slate-200'"
+        <!-- Selected Tags Display (Full width) -->
+        <div v-if="form.tags.length > 0" class="md:col-span-2 flex flex-wrap gap-2 mt-[-4px]">
+          <span 
+            v-for="(tag, index) in form.tags" 
+            :key="index"
+            class="flex items-center gap-1.5 px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold border border-primary-100"
           >
-            <component :is="getIcon(sub.icon)" :size="14" />
-            {{ sub.name }}
-          </button>
+            #{{ tag }}
+            <button @click="removeTag(index)" type="button" class="hover:text-primary-800">
+              <X :size="12" />
+            </button>
+          </span>
+        </div>
+
+        <!-- Category (Full width) -->
+        <div v-if="form.type !== 'transfer'" class="md:col-span-2 space-y-3 mt-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-bold text-slate-700">分类 <span class="text-rose-500">*</span></label>
+            <span v-if="formError === '请选择一个分类'" class="text-xs font-bold text-rose-500 animate-pulse">请选择一个分类</span>
+          </div>
+          
+          <!-- Parent Categories -->
+          <div 
+            class="grid grid-cols-4 sm:grid-cols-8 gap-3 p-1 rounded-2xl transition-all"
+            :class="{ 'ring-2 ring-rose-500/20 bg-rose-50/10': formError === '请选择一个分类' }"
+          >
+            <button 
+              v-for="cat in filteredCategories" 
+              :key="cat.id"
+              type="button"
+              @click="selectCategory(cat.id)"
+              class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 transition-all"
+              :class="form.categoryId === cat.id 
+                ? 'bg-primary-50 border-primary-500 text-primary-600 shadow-sm' 
+                : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50 hover:border-slate-200'"
+            >
+              <component :is="getIcon(cat.icon)" :size="20" />
+              <span class="text-xs font-bold">{{ cat.name }}</span>
+            </button>
+          </div>
+
+          <!-- Sub Categories -->
+          <div v-if="selectedCategory?.children?.length" class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div class="flex flex-wrap gap-2.5">
+              <button 
+                v-for="sub in selectedCategory.children" 
+                :key="sub.id"
+                type="button"
+                @click="selectSubCategory(sub.id)"
+                class="px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-all flex items-center gap-1.5"
+                :class="form.subCategoryId === sub.id 
+                  ? 'bg-white border-primary-500 text-primary-600 shadow-sm' 
+                  : 'bg-transparent border-transparent text-slate-500 hover:bg-white hover:border-slate-200'"
+              >
+                <component :is="getIcon(sub.icon)" :size="14" />
+                {{ sub.name }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Submit (Full width) -->
-    <div class="md:col-span-2 pt-4">
+    <!-- Submit (Full width) - 固定在底部 -->
+    <div class="pt-4 border-t border-slate-100 bg-white mt-auto">
       <div v-if="formError" class="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
         <X :size="16" />
         {{ formError }}
@@ -441,3 +446,20 @@ const handleSubmit = () => {
     </div>
   </form>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+</style>
+

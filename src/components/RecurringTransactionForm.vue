@@ -21,12 +21,23 @@ const formData = ref({
   description: '',      // 账单描述
   amount: '',           // 金额
   type: 'expense',      // 类型：支出/收入
-  categoryId: '',       // 父分类 ID
+  categoryId: 'exp_other', // 默认为"其他支出"
   subCategoryId: '',    // 子分类 ID
   frequency: 'monthly', // 重复频率：每日/每周/每月/每年
   startDate: new Date().toISOString().split('T')[0], // 开始日期
   accountId: store.accounts[0]?.id || '1'           // 关联账户
 })
+
+/**
+ * 切换交易类型
+ * @param {'expense'|'income'} type 
+ */
+const handleTypeChange = (type) => {
+  formData.value.type = type
+  // 切换类型时，根据类型自动预选默认分类
+  formData.value.categoryId = type === 'expense' ? 'exp_other' : 'inc_other'
+  formData.value.subCategoryId = ''
+}
 
 // --- 计算属性 ---
 
@@ -113,7 +124,7 @@ const handleSubmit = () => {
         <div class="grid grid-cols-2 gap-4 p-1 bg-slate-100 rounded-xl">
           <button 
             type="button"
-            @click="formData.type = 'expense'"
+            @click="handleTypeChange('expense')"
             :class="[
               'py-2 rounded-lg text-sm font-medium transition-all',
               formData.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
@@ -123,7 +134,7 @@ const handleSubmit = () => {
           </button>
           <button 
             type="button"
-            @click="formData.type = 'income'"
+            @click="handleTypeChange('income')"
             :class="[
               'py-2 rounded-lg text-sm font-medium transition-all',
               formData.type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'

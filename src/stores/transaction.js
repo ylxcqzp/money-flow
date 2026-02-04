@@ -480,11 +480,18 @@ export const useTransactionStore = defineStore('transaction', () => {
    * @param {Object} recurring 周期性账单配置对象
    */
   function addRecurringTransaction(recurring) {
+    // 如果用户没有填写分类，根据类型默认设置为"其他支出"或"其他收入"
+    const defaultCategoryId = recurring.type === 'income' ? 'inc_other' : 'exp_other'
+    const finalRecurring = {
+      categoryId: recurring.categoryId || defaultCategoryId,
+      ...recurring
+    }
+
     recurringTransactions.value.push({
       id: Date.now(),
       lastGeneratedDate: null,
-      nextDate: recurring.startDate,
-      ...recurring
+      nextDate: finalRecurring.startDate,
+      ...finalRecurring
     })
     saveRecurring()
     checkAndGenerateRecurring()

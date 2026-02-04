@@ -88,271 +88,323 @@ const getIcon = (name) => {
 </script>
 
 <template>
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div class="flex items-center gap-6">
-        <div class="flex items-center gap-3">
-          <h2 class="text-lg font-semibold text-slate-800">收支明细</h2>
-          <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full">
-            {{ store.filteredTransactions.length }}
-          </span>
-        </div>
-        
-        <!-- Tabs -->
-        <div class="flex items-center p-1 bg-slate-100 rounded-xl">
-          <button 
-            @click="activeTab = 'list'"
-            class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
-            :class="activeTab === 'list' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-          >
-            明细列表
-          </button>
-          <button 
-            @click="activeTab = 'ranking'"
-            class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
-            :class="activeTab === 'ranking' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-          >
-            支出排行
-          </button>
-        </div>
-      </div>
-      
-      <!-- Sorting Controls (Only show in list view) -->
-      <div v-if="activeTab === 'list'" class="flex items-center gap-2">
-        <div class="relative group/sort">
-          <button class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold transition-all border border-slate-200">
-            <ArrowUpDown :size="14" />
-            <span>{{ 
-              store.sortConfig.key === 'date' ? '按日期' : 
-              store.sortConfig.key === 'amount' ? '按金额' : '按分类' 
-            }}</span>
-            <span class="text-[10px] text-slate-400">({{ store.sortConfig.order === 'desc' ? '降序' : '升序' }})</span>
-            <ChevronDown :size="12" class="text-slate-400 group-hover/sort:rotate-180 transition-transform" />
-          </button>
-          
-          <!-- Dropdown -->
-          <div class="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover/sort:opacity-100 group-hover/sort:visible transition-all transform origin-top-right scale-95 group-hover/sort:scale-100">
-            <button 
-              @click="store.setSort('date')"
-              class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
-              :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'date' }"
-            >
-              日期排序
-              <Check v-if="store.sortConfig.key === 'date'" :size="12" />
-            </button>
-            <button 
-              @click="store.setSort('amount')"
-              class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
-              :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'amount' }"
-            >
-              金额排序
-              <Check v-if="store.sortConfig.key === 'amount'" :size="12" />
-            </button>
-            <button 
-              @click="store.setSort('category')"
-              class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
-              :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'category' }"
-            >
-              分类排序
-              <Check v-if="store.sortConfig.key === 'category'" :size="12" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar">
-      <!-- List View -->
-      <template v-if="activeTab === 'list'">
-        <div v-if="store.filteredTransactions.length === 0" class="p-16 text-center">
-          <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-            <Calendar class="text-slate-200" :size="40" />
-          </div>
-          <h3 class="text-slate-900 font-bold mb-2">还没有账单记录</h3>
-          <p class="text-slate-400 text-sm mb-8">良好的记账习惯从第一笔开始</p>
-          <button 
-            @click="emit('add')"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-primary-50 text-primary-600 rounded-xl font-bold hover:bg-primary-600 hover:text-white transition-all active:scale-95 group"
-          >
-            <Plus :size="20" />
-            点这里开始记录
-          </button>
-        </div>
-
-        <div 
-          v-for="transaction in store.filteredTransactions" 
-          :key="transaction.id"
-          class="p-4 sm:p-6 hover:bg-slate-50/50 transition-colors group"
-        >
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-start gap-4 min-w-0">
-              <!-- Icon Wrapper -->
-              <div 
-                class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm mt-0.5"
-                :class="{
-                  'bg-emerald-50 text-emerald-600': transaction.type === 'income',
-                  'bg-rose-50 text-rose-600': transaction.type === 'expense',
-                  'bg-blue-50 text-blue-600': transaction.type === 'transfer'
-                }"
+  <div class="perspective-2000 h-full">
+    <div 
+      class="relative transition-all duration-800 preserve-3d h-full [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]"
+      :class="{ 
+        '[transform:rotateY(180deg)_scale(0.98)]': activeTab === 'ranking',
+        'scale-100': activeTab === 'list'
+      }"
+    >
+      <!-- List View (Front Face) -->
+      <div class="backface-hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+              <button 
+                @click="activeTab = 'list'"
+                class="text-lg font-bold transition-colors relative"
+                :class="activeTab === 'list' ? 'text-slate-800' : 'text-slate-300 hover:text-slate-400'"
               >
-                <template v-if="transaction.type === 'transfer'">
-                  <ArrowRightLeft :size="22" />
-                </template>
-                <template v-else>
-                  <component :is="getIcon(getCategoryInfo(transaction).icon)" :size="22" />
-                </template>
-              </div>
-
-              <!-- Info Wrapper -->
-              <div class="min-w-0">
-                <!-- Category / Title -->
-                <h3 class="text-base font-bold text-slate-900 leading-tight truncate">
-                  {{ transaction.type === 'transfer' ? '账户转账' : getCategoryInfo(transaction).name }}
-                </h3>
-
-                <!-- Description / Remark -->
-                <p v-if="transaction.description" class="text-sm text-slate-500 mt-1 line-clamp-1">
-                  {{ transaction.description }}
-                </p>
-
-                <!-- Meta Info -->
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2">
-                  <span class="flex items-center gap-1 text-[11px] font-medium text-slate-400">
-                    <Calendar :size="12" />
-                    {{ formatDate(transaction.date) }}
-                  </span>
-                  
-                  <div class="h-1 w-1 rounded-full bg-slate-200"></div>
-
-                  <span v-if="transaction.type !== 'transfer'" class="flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">
-                    {{ getAccountName(transaction.accountId || '1') }}
-                  </span>
-                  <span v-else class="flex items-center gap-1.5 text-[11px] font-bold">
-                    <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
-                      {{ getAccountName(transaction.fromAccountId) }}
-                    </span>
-                    <ArrowRightLeft :size="10" class="text-slate-300" />
-                    <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">
-                      {{ getAccountName(transaction.toAccountId) }}
-                    </span>
-                  </span>
-
-                  <!-- Tags -->
-                  <template v-if="transaction.tags?.length">
-                    <div class="h-1 w-1 rounded-full bg-slate-200"></div>
-                    <div class="flex flex-wrap gap-1">
-                      <button 
-                        v-for="tag in transaction.tags" 
-                        :key="tag"
-                        @click.stop="store.toggleTagFilter(tag)"
-                        class="flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded text-[10px] font-bold border border-slate-100 hover:border-primary-200 hover:text-primary-600 hover:bg-primary-50 transition-all"
-                        :class="{ 'bg-primary-50 border-primary-200 text-primary-600': store.selectedTags.includes(tag) }"
-                      >
-                        <Hash :size="8" />
-                        {{ tag }}
-                      </button>
-                    </div>
-                  </template>
-                </div>
+                收支明细
+                <div v-if="activeTab === 'list'" class="absolute -bottom-2 left-0 right-0 h-1 bg-primary-500 rounded-full"></div>
+              </button>
+              <div class="h-4 w-[1px] bg-slate-200"></div>
+              <button 
+                @click="activeTab = 'ranking'"
+                class="text-lg font-bold transition-colors relative"
+                :class="activeTab === 'ranking' ? 'text-slate-800' : 'text-slate-300 hover:text-slate-400'"
+              >
+                支出排行
+                <div v-if="activeTab === 'ranking'" class="absolute -bottom-2 left-0 right-0 h-1 bg-rose-500 rounded-full"></div>
+              </button>
+              <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full ml-1">
+                {{ store.filteredTransactions.length }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Sorting Controls -->
+          <div class="flex items-center gap-2">
+            <div class="relative group/sort">
+              <button class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold transition-all border border-slate-200">
+                <ArrowUpDown :size="14" />
+                <span>{{ 
+                  store.sortConfig.key === 'date' ? '按日期' : 
+                  store.sortConfig.key === 'amount' ? '按金额' : '按分类' 
+                }}</span>
+                <span class="text-[10px] text-slate-400">({{ store.sortConfig.order === 'desc' ? '降序' : '升序' }})</span>
+                <ChevronDown :size="12" class="text-slate-400 group-hover/sort:rotate-180 transition-transform" />
+              </button>
+              
+              <!-- Dropdown -->
+              <div class="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover/sort:opacity-100 group-hover/sort:visible transition-all transform origin-top-right scale-95 group-hover/sort:scale-100">
+                <button 
+                  @click="store.setSort('date')"
+                  class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
+                  :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'date' }"
+                >
+                  日期排序
+                  <Check v-if="store.sortConfig.key === 'date'" :size="12" />
+                </button>
+                <button 
+                  @click="store.setSort('amount')"
+                  class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
+                  :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'amount' }"
+                >
+                  金额排序
+                  <Check v-if="store.sortConfig.key === 'amount'" :size="12" />
+                </button>
+                <button 
+                  @click="store.setSort('category')"
+                  class="w-full text-left px-3 py-2 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-between"
+                  :class="{ 'text-primary-600 bg-primary-50/50': store.sortConfig.key === 'category' }"
+                >
+                  分类排序
+                  <Check v-if="store.sortConfig.key === 'category'" :size="12" />
+                </button>
               </div>
             </div>
-            
-            <div class="flex items-center gap-4 shrink-0">
-              <div class="text-right">
-                <p 
-                  class="text-lg font-black tracking-tight"
+          </div>
+        </div>
+
+        <div class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar flex-1">
+          <div v-if="store.filteredTransactions.length === 0" class="p-16 text-center">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+              <Calendar class="text-slate-200" :size="40" />
+            </div>
+            <h3 class="text-slate-900 font-bold mb-2">还没有账单记录</h3>
+            <p class="text-slate-400 text-sm mb-8">良好的记账习惯从第一笔开始</p>
+            <button 
+              @click="emit('add')"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-primary-50 text-primary-600 rounded-xl font-bold hover:bg-primary-600 hover:text-white transition-all active:scale-95 group"
+            >
+              <Plus :size="20" />
+              点这里开始记录
+            </button>
+          </div>
+
+          <div 
+            v-for="transaction in store.filteredTransactions" 
+            :key="transaction.id"
+            class="p-4 sm:p-6 hover:bg-slate-50/50 transition-colors group"
+          >
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-start gap-4 min-w-0">
+                <!-- Icon Wrapper -->
+                <div 
+                  class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm mt-0.5"
                   :class="{
-                    'text-emerald-600': transaction.type === 'income',
-                    'text-rose-600': transaction.type === 'expense',
-                    'text-blue-600': transaction.type === 'transfer'
+                    'bg-emerald-50 text-emerald-600': transaction.type === 'income',
+                    'bg-rose-50 text-rose-600': transaction.type === 'expense',
+                    'bg-blue-50 text-blue-600': transaction.type === 'transfer'
                   }"
                 >
-                  {{ transaction.type === 'income' ? '+' : (transaction.type === 'expense' ? '-' : '') }}{{ formatCurrency(Math.abs(transaction.amount)) }}
-                </p>
-                <!-- Foreign Currency Original Amount -->
-                <p 
-                  v-if="transaction.currency && transaction.currency !== store.baseCurrency" 
-                  class="text-[10px] text-slate-400 font-bold mt-0.5"
-                >
-                  {{ transaction.type === 'income' ? '+' : (transaction.type === 'expense' ? '-' : '') }}{{ formatForeignCurrency(Math.abs(transaction.originalAmount || transaction.amount), transaction.currency) }}
-                </p>
+                  <template v-if="transaction.type === 'transfer'">
+                    <ArrowRightLeft :size="22" />
+                  </template>
+                  <template v-else>
+                    <component :is="getIcon(getCategoryInfo(transaction).icon)" :size="22" />
+                  </template>
+                </div>
+
+                <!-- Info Wrapper -->
+                <div class="min-w-0">
+                  <!-- Category / Title -->
+                  <h3 class="text-base font-bold text-slate-900 leading-tight truncate">
+                    {{ transaction.type === 'transfer' ? '账户转账' : getCategoryInfo(transaction).name }}
+                  </h3>
+
+                  <!-- Description / Remark -->
+                  <p v-if="transaction.description" class="text-sm text-slate-500 mt-1 line-clamp-1">
+                    {{ transaction.description }}
+                  </p>
+
+                  <!-- Meta Info -->
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2">
+                    <span class="flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                      <Calendar :size="12" />
+                      {{ formatDate(transaction.date) }}
+                    </span>
+                    
+                    <div class="h-1 w-1 rounded-full bg-slate-200"></div>
+
+                    <span v-if="transaction.type !== 'transfer'" class="flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">
+                      {{ getAccountName(transaction.accountId || '1') }}
+                    </span>
+                    <span v-else class="flex items-center gap-1.5 text-[11px] font-bold">
+                      <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
+                        {{ getAccountName(transaction.fromAccountId) }}
+                      </span>
+                      <ArrowRightLeft :size="10" class="text-slate-300" />
+                      <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">
+                        {{ getAccountName(transaction.toAccountId) }}
+                      </span>
+                    </span>
+
+                    <!-- Tags -->
+                    <template v-if="transaction.tags?.length">
+                      <div class="h-1 w-1 rounded-full bg-slate-200"></div>
+                      <div class="flex flex-wrap gap-1">
+                        <button 
+                          v-for="tag in transaction.tags" 
+                          :key="tag"
+                          @click.stop="store.toggleTagFilter(tag)"
+                          class="flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-50 text-slate-400 rounded text-[10px] font-bold border border-slate-100 hover:border-primary-200 hover:text-primary-600 hover:bg-primary-50 transition-all"
+                          :class="{ 'bg-primary-50 border-primary-200 text-primary-600': store.selectedTags.includes(tag) }"
+                        >
+                          <Hash :size="8" />
+                          {{ tag }}
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
               </div>
               
-              <!-- Actions -->
-              <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-                <button 
-                  @click="emit('edit', transaction)"
-                  class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                  title="编辑"
-                >
-                  <Edit2 :size="16" />
-                </button>
-                <button 
-                  @click="store.deleteTransaction(transaction.id)"
-                  class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                  title="删除"
-                >
-                  <Trash2 :size="16" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <!-- Ranking View -->
-      <template v-else>
-        <div v-if="store.categoryRankings.length === 0" class="p-16 text-center">
-          <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <TrendingUp class="text-slate-200" :size="40" />
-          </div>
-          <h3 class="text-slate-900 font-bold mb-2">暂无支出排行数据</h3>
-          <p class="text-slate-400 text-sm">当前筛选条件下没有支出记录</p>
-        </div>
-
-        <div v-else class="p-6 space-y-8">
-          <div 
-            v-for="(item, index) in store.categoryRankings" 
-            :key="item.id"
-            class="relative group"
-          >
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
-                  <component :is="getIcon(item.icon)" :size="20" />
-                </div>
-                <div>
-                  <h4 class="text-sm font-bold text-slate-800">{{ item.name }}</h4>
-                  <p class="text-[11px] font-medium text-slate-500">
-                    {{ store.filterType === 'year' ? '本年' : store.filterType === 'month' ? '本月' : '该时段' }}共支出 {{ formatCurrency(item.amount) }}
+              <div class="flex items-center gap-4 shrink-0">
+                <div class="text-right">
+                  <p 
+                    class="text-lg font-black tracking-tight"
+                    :class="{
+                      'text-emerald-600': transaction.type === 'income',
+                      'text-rose-600': transaction.type === 'expense',
+                      'text-blue-600': transaction.type === 'transfer'
+                    }"
+                  >
+                    {{ transaction.type === 'income' ? '+' : (transaction.type === 'expense' ? '-' : '') }}{{ formatCurrency(Math.abs(transaction.amount)) }}
+                  </p>
+                  <!-- Foreign Currency Original Amount -->
+                  <p 
+                    v-if="transaction.currency && transaction.currency !== store.baseCurrency" 
+                    class="text-[10px] text-slate-400 font-bold mt-0.5"
+                  >
+                    {{ transaction.type === 'income' ? '+' : (transaction.type === 'expense' ? '-' : '') }}{{ formatForeignCurrency(Math.abs(transaction.originalAmount || transaction.amount), transaction.currency) }}
                   </p>
                 </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                  <button 
+                    @click="emit('edit', transaction)"
+                    class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                    title="编辑"
+                  >
+                    <Edit2 :size="16" />
+                  </button>
+                  <button 
+                    @click="store.deleteTransaction(transaction.id)"
+                    class="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                    title="删除"
+                  >
+                    <Trash2 :size="16" />
+                  </button>
+                </div>
               </div>
-              <div class="text-right">
-                <p class="text-sm font-black text-slate-900">{{ item.count }} 笔</p>
-              </div>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-primary-500 rounded-full transition-all duration-1000 ease-out origin-left"
-                :style="{ width: `${item.percentage}%` }"
-              ></div>
-            </div>
-
-            <!-- Rank Number -->
-            <div class="absolute -left-2 -top-2 w-5 h-5 bg-white border border-slate-100 rounded-lg shadow-sm flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:text-primary-600 group-hover:border-primary-100 transition-colors">
-              {{ index + 1 }}
             </div>
           </div>
         </div>
-      </template>
+      </div>
+
+      <!-- Ranking View (Back Face) -->
+      <div class="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+              <button 
+                @click="activeTab = 'list'"
+                class="text-lg font-bold transition-colors relative"
+                :class="activeTab === 'list' ? 'text-slate-800' : 'text-slate-300 hover:text-slate-400'"
+              >
+                收支明细
+                <div v-if="activeTab === 'list'" class="absolute -bottom-2 left-0 right-0 h-1 bg-primary-500 rounded-full"></div>
+              </button>
+              <div class="h-4 w-[1px] bg-slate-200"></div>
+              <button 
+                @click="activeTab = 'ranking'"
+                class="text-lg font-bold transition-colors relative"
+                :class="activeTab === 'ranking' ? 'text-slate-800' : 'text-slate-300 hover:text-slate-400'"
+              >
+                支出排行
+                <div v-if="activeTab === 'ranking'" class="absolute -bottom-2 left-0 right-0 h-1 bg-rose-500 rounded-full"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar flex-1">
+          <div v-if="store.categoryRankings.length === 0" class="p-16 text-center">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <TrendingUp class="text-slate-200" :size="40" />
+            </div>
+            <h3 class="text-slate-900 font-bold mb-2">暂无支出排行数据</h3>
+            <p class="text-slate-400 text-sm">当前筛选条件下没有支出记录</p>
+          </div>
+
+          <div v-else class="p-6 space-y-8">
+            <div 
+              v-for="item in store.categoryRankings" 
+              :key="item.id"
+              class="relative group"
+            >
+              <div class="flex gap-4 items-start">
+                <!-- Left Side: Icon -->
+                <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 shadow-sm group-hover:bg-rose-100 group-hover:scale-110 transition-all duration-300">
+                  <component :is="getIcon(item.icon)" :size="24" />
+                </div>
+
+                <!-- Right Side: Content -->
+                <div class="flex-1 space-y-3">
+                  <!-- Top: Category Name -->
+                  <div class="flex justify-between items-center">
+                    <h4 class="text-sm font-bold text-slate-800">{{ item.name }}</h4>
+                    <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                      {{ item.percentage.toFixed(1) }}%
+                    </span>
+                  </div>
+                  
+                  <!-- Middle: Progress Bar -->
+                  <div class="h-2 w-full bg-rose-50 rounded-full overflow-hidden">
+                    <div 
+                      class="h-full bg-rose-500 rounded-full transition-all duration-1000 ease-out origin-left shadow-[0_0_8px_rgba(244,63,94,0.3)]"
+                      :style="{ width: `${item.percentage}%` }"
+                    ></div>
+                  </div>
+
+                  <!-- Bottom: Stats -->
+                  <div class="flex justify-between items-center">
+                    <p class="text-[11px] font-medium text-slate-500">
+                      {{ store.filterType === 'year' ? '本年' : store.filterType === 'month' ? '本月' : '该时段' }}共支出 
+                      <span class="text-rose-600 font-bold ml-1">{{ formatCurrency(item.amount) }}</span>
+                    </p>
+                    <p class="text-[11px] font-bold text-slate-900 bg-rose-50 px-2 py-0.5 rounded-md text-rose-700">
+                      消费 {{ item.count }} 笔
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.perspective-2000 {
+  perspective: 2000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 /* 自定义滚动条样式 */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
