@@ -328,7 +328,8 @@ export const useTransactionStore = defineStore('transaction', () => {
         notificationStore.success('汇率数据已更新')
       }
     } catch (error) {
-      notificationStore.error('获取汇率失败')
+      // 这里的 fetch 是原生请求，不受拦截器控制，可以保留提示，但建议改写为统一方式
+      notificationStore.error('获取汇率数据失败，请检查网络')
     } finally {
       isFetchingRates.value = false
     }
@@ -359,7 +360,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('周期性账单规则已添加')
       return true
     } catch (e) {
-      notificationStore.error('添加失败')
       return false
     }
   }
@@ -372,7 +372,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('周期性账单已自动生成')
       return true
     } catch (e) {
-      notificationStore.error('生成周期性账单失败')
       return false
     }
   }
@@ -384,7 +383,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('规则已删除')
       return true
     } catch (e) {
-      notificationStore.error('删除失败')
       return false
     }
   }
@@ -397,7 +395,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('交易已记录')
       return true
     } catch (e) {
-      notificationStore.error('保存失败')
       return false
     }
   }
@@ -410,7 +407,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('交易已更新')
       return true
     } catch (e) {
-      notificationStore.error('更新失败')
       return false
     }
   }
@@ -423,7 +419,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('交易已删除')
       return true
     } catch (e) {
-      notificationStore.error('删除失败')
       return false
     }
   }
@@ -435,7 +430,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('账户已添加')
       return true
     } catch (e) {
-      notificationStore.error('添加失败')
       return false
     }
   }
@@ -447,7 +441,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('账户已更新')
       return true
     } catch (e) {
-      notificationStore.error('更新失败')
       return false
     }
   }
@@ -459,7 +452,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('账户已删除')
       return true
     } catch (e) {
-      notificationStore.error('删除失败，可能存在关联数据')
       return false
     }
   }
@@ -471,7 +463,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('分类已添加')
       return true
     } catch (e) {
-      notificationStore.error('添加失败')
       return false
     }
   }
@@ -483,7 +474,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('分类已更新')
       return true
     } catch (e) {
-      notificationStore.error('更新失败')
       return false
     }
   }
@@ -495,7 +485,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('分类已删除')
       return true
     } catch (e) {
-      notificationStore.error('删除失败')
       return false
     }
   }
@@ -518,7 +507,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('预算已设置')
       return true
     } catch (e) {
-      notificationStore.error('设置失败')
       return false
     }
   }
@@ -530,7 +518,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('目标已添加')
       return true
     } catch (e) {
-      notificationStore.error('添加失败')
       return false
     }
   }
@@ -546,7 +533,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('进度已更新')
       return true
     } catch (e) {
-      notificationStore.error('更新失败')
       return false
     }
   }
@@ -558,7 +544,6 @@ export const useTransactionStore = defineStore('transaction', () => {
       notificationStore.success('目标已删除')
       return true
     } catch (e) {
-      notificationStore.error('删除失败')
       return false
     }
   }

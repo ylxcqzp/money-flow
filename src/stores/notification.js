@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { toast } from 'vue3-toastify'
 
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])
@@ -14,6 +15,13 @@ export const useNotificationStore = defineStore('notification', () => {
     const id = Date.now()
     notifications.value.push({ id, message, type })
     
+    // 调用 Toast 显示
+    // vue3-toastify 的类型参数直接对应
+    toast(message, {
+      type: type,
+      autoClose: duration,
+    })
+
     if (duration > 0) {
       setTimeout(() => removeNotification(id), duration)
     }

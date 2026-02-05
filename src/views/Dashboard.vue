@@ -41,8 +41,8 @@ const deletingRecurringId = ref(null)    // 正在删除的周期账单ID
 /**
  * 退出登录
  */
-const handleLogout = () => {
-  authStore.logout()
+const handleLogout = async () => {
+  await authStore.logout()
   router.push('/login')
 }
 
@@ -208,44 +208,7 @@ const handleDeleteRecurring = async (id) => {
       </div>
     </header>
 
-    <!-- Notifications Toast -->
-    <div class="fixed top-6 right-6 z-[200] space-y-3 pointer-events-none w-full max-w-sm">
-      <TransitionGroup 
-        enter-active-class="transform transition ease-out duration-300"
-        enter-from-class="translate-y-[-20px] translate-x-[20px] opacity-0"
-        enter-to-class="translate-y-0 translate-x-0 opacity-100"
-        leave-active-class="transition ease-in duration-200"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <div 
-          v-for="n in notificationStore.notifications" 
-          :key="n.id"
-          class="pointer-events-auto bg-white/90 backdrop-blur-md border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 rounded-2xl flex items-start gap-4 group"
-        >
-          <div 
-            class="p-2.5 rounded-xl shrink-0 shadow-sm"
-            :class="{
-              'bg-emerald-100 text-emerald-600': n.type === 'success',
-              'bg-rose-100 text-rose-600': n.type === 'error',
-              'bg-amber-100 text-amber-600': n.type === 'warning',
-              'bg-blue-100 text-blue-600': n.type === 'info'
-            }"
-          >
-            <component :is="n.type === 'success' ? Check : (n.type === 'error' ? X : AlertCircle)" :size="20" stroke-width="2.5" />
-          </div>
-          <div class="flex-1 pt-0.5">
-            <h4 class="text-sm font-bold text-slate-800 leading-tight">{{ n.type === 'success' ? '操作成功' : (n.type === 'error' ? '操作失败' : '系统提示') }}</h4>
-            <p class="text-xs text-slate-500 mt-1 leading-relaxed">{{ n.message }}</p>
-          </div>
-          <button @click="notificationStore.removeNotification(n.id)" class="text-slate-300 hover:text-slate-500 p-1 hover:bg-slate-50 rounded-lg transition-colors">
-            <X :size="16" />
-          </button>
-        </div>
-      </TransitionGroup>
-    </div>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <!-- Filters -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div class="flex p-1 bg-white rounded-xl border border-slate-200 w-fit">

@@ -14,7 +14,7 @@ const isLoading = ref(false)
 
 const form = ref({
   email: 'demo@example.com',
-  password: 'password123',
+  password: '12345678',
   name: ''
 })
 
@@ -71,8 +71,9 @@ const handleSubmit = async () => {
       </div>
       
       <!-- 右侧表单区域 -->
-      <div class="md:w-1/2 p-8 md:p-12 flex flex-col justify-center relative">
-        <div class="max-w-sm mx-auto w-full">
+      <div class="flex-1 p-8 md:p-12 flex flex-col justify-center relative bg-white">
+        
+        <div class="max-w-sm w-full mx-auto space-y-8">
           <h2 class="text-2xl font-bold text-slate-800 mb-2">
             {{ isLogin ? '欢迎回来' : '创建账户' }}
           </h2>
@@ -153,48 +154,11 @@ const handleSubmit = async () => {
               <span>Email: demo@example.com</span>
             </div>
             <div class="flex items-center justify-between">
-              <span>Password: password123</span>
+              <span>Password: 12345678</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Notifications Toast -->
-    <div class="fixed top-6 right-6 z-[200] space-y-3 pointer-events-none w-full max-w-sm">
-      <TransitionGroup 
-        enter-active-class="transform transition ease-out duration-300"
-        enter-from-class="translate-y-[-20px] translate-x-[20px] opacity-0"
-        enter-to-class="translate-y-0 translate-x-0 opacity-100"
-        leave-active-class="transition ease-in duration-200"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <div 
-          v-for="n in notificationStore.notifications" 
-          :key="n.id"
-          class="pointer-events-auto bg-white/90 backdrop-blur-md border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 rounded-2xl flex items-start gap-4 group"
-        >
-          <div 
-            class="p-2.5 rounded-xl shrink-0 shadow-sm"
-            :class="{
-              'bg-emerald-100 text-emerald-600': n.type === 'success',
-              'bg-rose-100 text-rose-600': n.type === 'error',
-              'bg-amber-100 text-amber-600': n.type === 'warning',
-              'bg-blue-100 text-blue-600': n.type === 'info'
-            }"
-          >
-            <component :is="n.type === 'success' ? Check : (n.type === 'error' ? X : AlertCircle)" :size="20" stroke-width="2.5" />
-          </div>
-          <div class="flex-1 pt-0.5">
-            <h4 class="text-sm font-bold text-slate-800 leading-tight">{{ n.type === 'success' ? '操作成功' : (n.type === 'error' ? '操作失败' : '系统提示') }}</h4>
-            <p class="text-xs text-slate-500 mt-1 leading-relaxed">{{ n.message }}</p>
-          </div>
-          <button @click="notificationStore.removeNotification(n.id)" class="text-slate-300 hover:text-slate-500 p-1 hover:bg-slate-50 rounded-lg transition-colors">
-            <X :size="16" />
-          </button>
-        </div>
-      </TransitionGroup>
     </div>
   </div>
 </template>

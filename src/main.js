@@ -4,6 +4,9 @@
  */
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import Vue3Toastify, { toast } from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
+
 import './style.css'
 import App from './App.vue'
 import router from './router'
@@ -13,6 +16,12 @@ const app = createApp(App)
 
 // 初始化状态管理插件 Pinia
 const pinia = createPinia()
+
+// 配置 Toast
+app.use(Vue3Toastify, {
+  autoClose: 3000,
+  position: toast.POSITION.TOP_CENTER,
+});
 
 // 使用 Pinia 插件进行状态管理
 app.use(pinia)

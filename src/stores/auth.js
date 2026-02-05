@@ -30,7 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
       notificationStore.success('登录成功，欢迎回来！')
       return true
     } catch (error) {
-      notificationStore.error(error.message || '登录失败，请检查邮箱和密码')
+      // notificationStore.error(error.message || '登录失败，请检查邮箱和密码')
       throw error
     }
   }
@@ -55,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       notificationStore.success('注册成功，欢迎加入 Money Flow！')
       return true
     } catch (error) {
-      notificationStore.error(error.message || '注册失败，请稍后重试')
+      // notificationStore.error(error.message || '注册失败，请稍后重试')
       throw error
     }
   }
@@ -63,16 +63,21 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 退出登录
    */
-  const logout = () => {
-    // 可选：调用后端退出接口
-    // authApi.logout()
-    
-    token.value = ''
-    user.value = null
-    localStorage.removeItem('money-flow-token')
-    localStorage.removeItem('money-flow-user')
-    
-    notificationStore.info('已退出登录')
+  const logout = async () => {
+    try {
+      // 调用后端退出接口
+      await authApi.logout()
+    } catch (error) {
+      console.error('Logout API failed:', error)
+    } finally {
+      // 无论接口是否成功，都清除本地状态
+      token.value = ''
+      user.value = null
+      localStorage.removeItem('money-flow-token')
+      localStorage.removeItem('money-flow-user')
+      
+      // notificationStore.info('已退出登录')
+    }
   }
 
   return {
