@@ -139,6 +139,14 @@ const getIcon = (name) => {
           
           <!-- Sorting Controls -->
           <div class="flex items-center gap-2">
+            <button
+              v-if="store.selectedTags.length > 0"
+              @click="store.clearTagFilters"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition-all border border-rose-100"
+            >
+              <RotateCcw :size="14" />
+              清空标签
+            </button>
             <div class="relative group/sort">
               <button class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold transition-all border border-slate-200">
                 <ArrowUpDown :size="14" />

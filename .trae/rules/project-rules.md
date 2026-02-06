@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 项目规则
+---
 # Money Flow 项目规则
 
 ## 技术栈规范

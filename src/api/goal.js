@@ -1,5 +1,20 @@
 import request from '@/utils/request'
 
+function mapGoalRequest(data) {
+  const payload = { ...data }
+  if ('targetAmount' in payload) payload.targetAmount = Number(payload.targetAmount)
+  if ('currentAmount' in payload) payload.currentAmount = Number(payload.currentAmount)
+  return payload
+}
+
+function mapGoalResponse(item) {
+  if (!item) return item
+  const g = { ...item }
+  if ('target_amount' in g) g.targetAmount = Number(g.target_amount)
+  if ('current_amount' in g) g.currentAmount = Number(g.current_amount)
+  return g
+}
+
 export default {
   /**
    * 获取目标列表
@@ -8,6 +23,9 @@ export default {
     return request({
       url: '/goals',
       method: 'get'
+    }).then(res => {
+      const data = res.data || res
+      return Array.isArray(data) ? data.map(mapGoalResponse) : data
     })
   },
 
@@ -16,10 +34,11 @@ export default {
    * @param {Object} data
    */
   createGoal(data) {
+    const payload = mapGoalRequest(data)
     return request({
       url: '/goals',
       method: 'post',
-      data
+      data: payload
     })
   },
 
@@ -29,10 +48,11 @@ export default {
    * @param {Object} data
    */
   updateGoal(id, data) {
+    const payload = mapGoalRequest(data)
     return request({
       url: `/goals/${id}`,
       method: 'put',
-      data
+      data: payload
     })
   },
 
@@ -53,10 +73,11 @@ export default {
    * @param {Object} data { amount, operateDate }
    */
   addGoalRecord(goalId, data) {
+    const payload = { ...data }
     return request({
       url: `/goals/${goalId}/records`,
       method: 'post',
-      data
+      data: payload
     })
   }
 }

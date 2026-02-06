@@ -127,14 +127,14 @@ export const useTransactionStore = defineStore('transaction', () => {
       // 构建日期范围
       const d = filterDate.value
       if (filterType.value === 'year') {
-        params.startDate = format(startOfYear(d), 'yyyy-MM-dd HH:mm:ss')
-        params.endDate = format(endOfYear(d), 'yyyy-MM-dd HH:mm:ss')
+        params.startDate = format(startOfYear(d), 'yyyy-MM-dd')
+        params.endDate = format(endOfYear(d), 'yyyy-MM-dd')
       } else if (filterType.value === 'month') {
-        params.startDate = format(startOfMonth(d), 'yyyy-MM-dd HH:mm:ss')
-        params.endDate = format(endOfMonth(d), 'yyyy-MM-dd HH:mm:ss')
+        params.startDate = format(startOfMonth(d), 'yyyy-MM-dd')
+        params.endDate = format(endOfMonth(d), 'yyyy-MM-dd')
       } else if (filterType.value === 'day') {
-        params.startDate = format(startOfDay(d), 'yyyy-MM-dd HH:mm:ss')
-        params.endDate = format(endOfDay(d), 'yyyy-MM-dd HH:mm:ss')
+        params.startDate = format(startOfDay(d), 'yyyy-MM-dd')
+        params.endDate = format(endOfDay(d), 'yyyy-MM-dd')
       }
       
       // 标签筛选
@@ -167,8 +167,14 @@ export const useTransactionStore = defineStore('transaction', () => {
    * (后端可能已排序，这里做二次排序或确保顺序)
    */
   const filteredTransactions = computed(() => {
-    // 既然已经是后端筛选过的数据，这里主要处理排序
-    return [...transactions.value].sort((a, b) => {
+    let list = transactions.value
+    if (selectedTags.value.length > 0) {
+      list = list.filter(t => {
+        const tagList = Array.isArray(t.tags) ? t.tags : (t.tags ? t.tags.split(',') : [])
+        return selectedTags.value.every(tag => tagList.includes(tag))
+      })
+    }
+    return [...list].sort((a, b) => {
       const { key, order } = sortConfig.value
       let comparison = 0
 

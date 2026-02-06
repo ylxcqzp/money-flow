@@ -14,7 +14,7 @@
 建议采用统一响应结构：
 ```json
 {
-  "code": 200,      // 200 表示成功，非 200 表示业务错误
+  "code": 0,      // 0 表示成功，非 0 表示业务错误  
   "msg": "success", // 提示信息
   "data": { ... }   // 业务数据
 }
@@ -182,8 +182,8 @@
 - **URL**: `/transactions`
 - **Method**: `GET`
 - **Query Params**:
-  - `startDate`: `2026-01-01 00:00:00`
-  - `endDate`: `2026-01-31 23:59:59`
+  - `startDate`: `2026-01-01`
+  - `endDate`: `2026-01-31`
   - `type`: `expense` | `income` | `transfer` | `all`
   - `categoryId`: (可选)
   - `accountId`: (可选)
@@ -195,7 +195,7 @@
       "id": 1001,
       "type": "expense",
       "amount": 50.00,
-      "date": "2026-02-04 12:30:00",
+      "date": "2026-02-04",
       "categoryId": 10,
       "subCategoryId": 11,
       "accountId": 1,
@@ -213,7 +213,7 @@
   {
     "type": "expense",
     "amount": 50.00,
-    "date": "2026-02-04 12:30:00",
+    "date": "2026-02-04",
     "categoryId": 10,
     "accountId": 1,
     "note": "备注",

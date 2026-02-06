@@ -22,7 +22,12 @@ export const useAuthStore = defineStore('auth', () => {
       const data = res.data || res
       
       token.value = data.token
-      user.value = data.user
+      const u = data.user || {}
+      user.value = {
+        ...u,
+        name: u.nickname || u.username || u.name || '',
+        avatar: u.avatar_url || u.avatar || ''
+      }
       
       localStorage.setItem('money-flow-token', token.value)
       localStorage.setItem('money-flow-user', JSON.stringify(user.value))
@@ -47,7 +52,12 @@ export const useAuthStore = defineStore('auth', () => {
       const data = res.data || res
       
       token.value = data.token
-      user.value = data.user
+      const u = data.user || {}
+      user.value = {
+        ...u,
+        name: u.nickname || u.username || u.name || '',
+        avatar: u.avatar_url || u.avatar || ''
+      }
       
       localStorage.setItem('money-flow-token', token.value)
       localStorage.setItem('money-flow-user', JSON.stringify(user.value))
