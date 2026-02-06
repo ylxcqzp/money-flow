@@ -5,6 +5,7 @@
  */
 import { ref, nextTick } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
+import { ElMessageBox } from 'element-plus'
 import { 
   Plus, Trash2, Edit2, Wallet, CreditCard, Smartphone, MessageCircle, 
   Save, X, Check, Info
@@ -117,8 +118,19 @@ const handleUpdate = async () => {
  * @param {string} id 账户 ID
  */
 const handleDelete = async (id) => {
-  if (confirm('确定要删除这个账户吗？如果该账户已有交易记录，将无法删除。')) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这个账户吗？如果该账户已有交易记录，将无法删除。',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
     await store.deleteAccount(id)
+  } catch (e) {
+    // cancelled
   }
 }
 </script>
@@ -223,7 +235,7 @@ const handleDelete = async (id) => {
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">账户类型</label>
             <select 
               v-model="newAccount.type"
-              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all text-sm font-medium"
+              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all text-sm font-medium appearance-none"
             >
               <option value="cash">现金账户</option>
               <option value="card">银行卡/电子钱包</option>

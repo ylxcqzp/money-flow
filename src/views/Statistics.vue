@@ -80,6 +80,19 @@ const showFilterPanel = ref(false);                                       // 是
 // --- 数据计算逻辑 ---
 
 /**
+ * 根据ID获取完整分类名称（父 - 子）
+ * @param id 分类ID
+ * @returns {string} 分类名称
+ */
+const getFullCategoryName = (id: string | number) => {
+  const { category, parent } = store.findCategoryWithParent(id);
+  if (category) {
+    return parent ? `${parent.name} - ${category.name}` : category.name;
+  }
+  return '未知';
+};
+
+/**
  * 根据ID获取分类名称
  * @param id 分类ID
  * @returns {string} 分类名称
@@ -144,12 +157,13 @@ const pieChartOption = computed(() => {
   let data: { name: string, value: number, id: string }[] = [];
   
   if (!drilldownCategoryId.value) {
-    // 顶层分类统计
+    // 顶层分类统计：将所有交易归类到它们的顶层父分类
     const summaryMap: Record<string, number> = {};
     transactions.forEach(t => {
-      const catId = t.categoryId;
-      if (catId) {
-        summaryMap[catId] = (summaryMap[catId] || 0) + Number(t.amount);
+      const { category, parent } = store.findCategoryWithParent(t.categoryId);
+      const topLevelId = parent ? String(parent.id) : String(t.categoryId);
+      if (topLevelId) {
+        summaryMap[topLevelId] = (summaryMap[topLevelId] || 0) + Number(t.amount);
       }
     });
     
@@ -159,13 +173,18 @@ const pieChartOption = computed(() => {
       value
     }));
   } else {
-    // 子分类下钻统计
-    const parentId = drilldownCategoryId.value;
+    // 子分类下钻统计：统计选中父分类下的所有子分类
+    const parentId = String(drilldownCategoryId.value);
     const summaryMap: Record<string, number> = {};
     
-    transactions.filter(t => t.categoryId === parentId).forEach(t => {
-      const subCatId = t.subCategoryId || 'other';
-      summaryMap[subCatId] = (summaryMap[subCatId] || 0) + Number(t.amount);
+    transactions.forEach(t => {
+      const { category, parent } = store.findCategoryWithParent(t.categoryId);
+      // 如果该交易属于当前下钻的父分类
+      if (String(t.categoryId) === parentId || (parent && String(parent.id) === parentId)) {
+        // 如果是子分类记录，则按子分类统计；如果是父分类本身记录，则归入“其他”
+        const subId = (parent && String(parent.id) === parentId) ? String(t.categoryId) : 'other';
+        summaryMap[subId] = (summaryMap[subId] || 0) + Number(t.amount);
+      }
     });
     
     data = Object.entries(summaryMap).map(([id, value]) => ({
@@ -382,16 +401,19 @@ const exportToExcel = () => {
 
   try {
     // 准备 Excel 表头和数据映射
-    const excelData = filteredData.value.map(t => ({
-      '日期': format(parseISO(t.date), 'yyyy-MM-dd HH:mm'),
-      '类型': t.type === 'income' ? '收入' : (t.type === 'expense' ? '支出' : '转账'),
-      '分类': getCategoryName(t.categoryId),
-      '子分类': t.subCategoryId ? getCategoryName(t.subCategoryId) : '-',
-      '说明': t.description || '-',
-      '账户': store.accounts.find(a => a.id === (t.accountId || '1'))?.name || '默认账户',
-      '金额': Number(t.amount).toFixed(2),
-      '标签': t.tags ? t.tags.join(', ') : '-'
-    }));
+    const excelData = filteredData.value.map(t => {
+      const { category, parent } = store.findCategoryWithParent(t.categoryId);
+      return {
+        '日期': format(parseISO(t.date), 'yyyy-MM-dd HH:mm'),
+        '类型': t.type === 'income' ? '收入' : (t.type === 'expense' ? '支出' : '转账'),
+        '分类': parent ? parent.name : (category?.name || (t.type === 'transfer' ? '转账' : '未知')),
+        '子分类': parent ? category?.name : '-',
+        '说明': t.description || '-',
+        '账户': store.accounts.find(a => a.id === (t.accountId || '1'))?.name || '默认账户',
+        '金额': Number(t.amount).toFixed(2),
+        '标签': t.tags ? t.tags.join(', ') : '-'
+      };
+    });
 
     // 创建工作表
     const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -686,8 +708,7 @@ const exportToExcel = () => {
                   <tr v-for="t in filteredData.slice(0, 50)" :key="t.id" class="text-sm hover:bg-slate-50 transition-colors">
                     <td class="py-4 px-4 text-slate-500">{{ format(parseISO(t.date), 'MM-dd') }}</td>
                     <td class="py-4 px-4 font-medium text-slate-700">
-                      {{ getCategoryName(t.categoryId) }}
-                      <span v-if="t.subCategoryId" class="text-xs text-slate-400 font-normal"> / {{ getCategoryName(t.subCategoryId) }}</span>
+                      {{ getFullCategoryName(t.categoryId) }}
                     </td>
                     <td class="py-4 px-4 text-slate-600">{{ t.description || '-' }}</td>
                     <td class="py-4 px-4">

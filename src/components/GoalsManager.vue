@@ -5,6 +5,7 @@
  */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
+import { ElMessageBox } from 'element-plus'
 import { 
   Plus, Trash2, Target, Trophy, Plane, Home, Car, Laptop, 
   Heart, Gift, ShoppingCart, Briefcase, HelpCircle, Save, X, 
@@ -133,8 +134,19 @@ const handleUpdateProgress = async (isDeposit = true) => {
  * 处理删除目标
  */
 const handleDeleteGoal = async (id) => {
-  if (confirm('确定要删除这个储蓄目标吗？')) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这个储蓄目标吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
     await store.deleteGoal(id)
+  } catch (e) {
+    // cancelled
   }
 }
 
@@ -384,6 +396,7 @@ const resetForm = () => {
         立即创建第一个目标
       </button>
     </div>
+
   </div>
 </template>
 

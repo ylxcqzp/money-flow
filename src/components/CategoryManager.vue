@@ -5,6 +5,7 @@
  */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
+import { ElMessageBox } from 'element-plus'
 import { 
   Plus, Trash2, Edit2, ChevronRight, ChevronDown, 
   Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, 
@@ -215,8 +216,19 @@ const handleUpdate = async () => {
  * @param {string} id 分类 ID
  */
 const handleDelete = async (id) => {
-  if (confirm('确定要删除这个分类吗？')) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这个分类吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
     await store.deleteCategory(id)
+  } catch (e) {
+    // cancelled
   }
 }
 

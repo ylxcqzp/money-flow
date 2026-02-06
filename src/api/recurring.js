@@ -7,9 +7,16 @@ function mapRecurringRequest(data) {
     const dateStr = typeof payload.startDate === 'string' ? payload.startDate : ''
     payload.startDate = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr
   }
+  // 映射描述字段到后端可能需要的字段（如 note）
+  if (data.description) {
+    payload.note = data.description
+  }
+  
   const catId = payload.subCategoryId || payload.categoryId
   if (catId) payload.categoryId = catId
-  delete payload.description
+  
+  // 不要直接删除 description，除非确定后端不需要它
+  // 如果后端确实不需要 description 字段，我们可以删除它，但通常建议保留或映射
   return payload
 }
 

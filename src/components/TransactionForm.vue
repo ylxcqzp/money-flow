@@ -31,29 +31,37 @@ const currencies = [
 const getTodayStr = () => new Date().toISOString().split('T')[0]
 
 // 表单响应式状态
-const form = ref(props.initialData ? { 
-  ...props.initialData,
-  date: props.initialData.date ? new Date(props.initialData.date).toISOString().split('T')[0] : getTodayStr(),
-  currency: props.initialData.currency || store.baseCurrency,
-  accountId: props.initialData.accountId || '1',
-  fromAccountId: props.initialData.fromAccountId || '1',
-  toAccountId: props.initialData.toAccountId || '2',
-  categoryId: props.initialData.categoryId || '',
-  subCategoryId: props.initialData.subCategoryId || '',
-  tags: props.initialData.tags || []
-} : {
-  description: '',
-  amount: '',
-  date: getTodayStr(),
-  currency: store.baseCurrency,
-  type: 'expense',
-  categoryId: '',
-  subCategoryId: '',
-  accountId: store.accounts[0]?.id || '1',
-  fromAccountId: store.accounts[0]?.id || '1',
-  toAccountId: store.accounts[1]?.id || '2',
-  tags: []
-})
+const initializeForm = () => {
+  if (props.initialData) {
+    const { category, parent } = store.findCategoryWithParent(props.initialData.categoryId)
+    return { 
+      ...props.initialData,
+      date: props.initialData.date ? new Date(props.initialData.date).toISOString().split('T')[0] : getTodayStr(),
+      currency: props.initialData.currency || store.baseCurrency,
+      accountId: props.initialData.accountId || '1',
+      fromAccountId: props.initialData.fromAccountId || '1',
+      toAccountId: props.initialData.toAccountId || '2',
+      categoryId: parent ? parent.id : (props.initialData.categoryId || ''),
+      subCategoryId: parent ? props.initialData.categoryId : (props.initialData.subCategoryId || ''),
+      tags: props.initialData.tags ? [...props.initialData.tags] : []
+    }
+  }
+  return {
+    description: '',
+    amount: '',
+    date: getTodayStr(),
+    currency: store.baseCurrency,
+    type: 'expense',
+    categoryId: '',
+    subCategoryId: '',
+    accountId: store.accounts[0]?.id || '1',
+    fromAccountId: store.accounts[0]?.id || '1',
+    toAccountId: store.accounts[1]?.id || '2',
+    tags: []
+  }
+}
+
+const form = ref(initializeForm())
 
 onMounted(async () => {
   // 挂载时尝试更新汇率（如果长时间未更新）
@@ -160,6 +168,8 @@ const isSubmitting = ref(false)
  * 提交表单
  */
 const handleSubmit = async () => {
+  if (isSubmitting.value) return
+  
   formError.value = ''
   
   if (!form.value.amount) {
@@ -181,6 +191,7 @@ const handleSubmit = async () => {
   // originalAmount 存原始外币金额
   const payload = {
     ...form.value,
+    categoryId: form.value.subCategoryId || form.value.categoryId, // 始终发送叶子节点 ID
     originalAmount: originalAmount,
     currency: currency,
     amount: currency === store.baseCurrency 
@@ -190,6 +201,9 @@ const handleSubmit = async () => {
       ? 1 
       : (store.convertAmount(originalAmount, currency) / originalAmount).toFixed(4)
   }
+
+  // 移除多余的 subCategoryId 字段，因为后端只需要一个 categoryId
+  delete payload.subCategoryId
 
   let success = false
   if (props.initialData) {
@@ -259,12 +273,16 @@ const handleSubmit = async () => {
           </div>
           <div class="flex gap-2">
             <!-- Currency Selector -->
-            <div class="w-24 shrink-0 relative">
-              <select 
+            <div class="w-28 shrink-0">
+              <select
                 v-model="form.currency"
-                class="w-full h-12 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat"
+                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all font-bold appearance-none"
               >
-                <option v-for="c in currencies" :key="c.code" :value="c.code">
+                <option
+                  v-for="c in currencies"
+                  :key="c.code"
+                  :value="c.code"
+                >
                   {{ c.code }}
                 </option>
               </select>
@@ -311,42 +329,57 @@ const handleSubmit = async () => {
         <!-- Account -->
         <div v-if="form.type !== 'transfer'" class="space-y-2">
           <label class="block text-sm font-bold text-slate-700">账户</label>
-          <select 
-            v-model="form.accountId"
-            required
-            class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"
-          >
-            <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-              {{ acc.name }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="form.accountId"
+              class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
+            >
+              <option
+                v-for="acc in store.accounts"
+                :key="acc.id"
+                :value="acc.id"
+              >
+                {{ acc.name }}
+              </option>
+            </select>
+          </div>
         </div>
 
         <!-- Transfer Accounts -->
         <div v-else class="grid grid-cols-2 gap-4">
           <div class="space-y-2">
             <label class="block text-sm font-bold text-slate-700">转出</label>
-            <select 
-              v-model="form.fromAccountId"
-              required
-              class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-            >
-              <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-                {{ acc.name }}
-              </option>
-            </select>
+            <div class="relative">
+              <select
+                v-model="form.fromAccountId"
+                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
+              >
+                <option
+                  v-for="acc in store.accounts"
+                  :key="acc.id"
+                  :value="acc.id"
+                >
+                  {{ acc.name }}
+                </option>
+              </select>
+            </div>
           </div>
           <div class="space-y-2">
             <label class="block text-sm font-bold text-slate-700">转入</label>
-            <select 
-              v-model="form.toAccountId"
-              required
-              class="w-full px-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
-            >
-              <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">
-                {{ acc.name }}
-              </option>
-            </select>
+            <div class="relative">
+              <select
+                v-model="form.toAccountId"
+                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
+              >
+                <option
+                  v-for="acc in store.accounts"
+                  :key="acc.id"
+                  :value="acc.id"
+                >
+                  {{ acc.name }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 

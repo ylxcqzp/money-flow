@@ -26,9 +26,12 @@ const chartData = computed(() => {
   store.filteredTransactions
     .filter(t => t.type === 'expense')
     .forEach(t => {
-      // 查找父分类名称
-      const parentCat = store.findCategoryById(t.categoryId)
-      const catName = parentCat?.name || t.category || '未分类'
+      // 查找分类及其父分类
+      const { category, parent } = store.findCategoryWithParent(t.categoryId)
+      
+      // 汇总时使用顶层分类名称（如果存在父分类，则使用父分类名称；否则使用当前分类名称）
+      const catName = parent ? parent.name : (category?.name || t.category || '未分类')
+      
       // 累加金额
       const amount = Number(t.amount)
       categorySums[catName] = (categorySums[catName] || 0) + amount

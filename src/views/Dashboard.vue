@@ -21,6 +21,7 @@ import { useRouter } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } from 'date-fns'
 import { Loader2 } from 'lucide-vue-next'
+import { ElMessageBox } from 'element-plus'
 
 const store = useTransactionStore()
 const authStore = useAuthStore()
@@ -140,11 +141,25 @@ const getAccountIcon = (iconName) => {
  */
 const handleDeleteRecurring = async (id) => {
   if (deletingRecurringId.value) return
-  if (!confirm('确定要删除这条周期性账单规则吗？')) return
-
-  deletingRecurringId.value = id
-  await store.deleteRecurringTransaction(id)
-  deletingRecurringId.value = null
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这条周期性账单规则吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    deletingRecurringId.value = id
+    await store.deleteRecurringTransaction(id)
+  } catch (e) {
+    // cancelled
+  } finally {
+    deletingRecurringId.value = null
+  }
 }
 </script>
 

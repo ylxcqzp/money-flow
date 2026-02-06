@@ -16,18 +16,35 @@ const emit = defineEmits(['close', 'success'])
 
 const store = useTransactionStore()
 const isSubmitting = ref(false) // 提交状态
+const formError = ref('') // 表单错误信息
 
 // 表单响应式数据
-const formData = ref({
-  description: '',      // 账单描述
-  amount: '',           // 金额
-  type: 'expense',      // 类型：支出/收入
-  categoryId: 'exp_other', // 默认为"其他支出"
-  subCategoryId: '',    // 子分类 ID
-  frequency: 'monthly', // 重复频率：每日/每周/每月/每年
-  startDate: new Date().toISOString().split('T')[0], // 开始日期
-  accountId: store.accounts[0]?.id || '1'           // 关联账户
-})
+const initializeForm = () => {
+  if (props.initialData) {
+    const { category, parent } = store.findCategoryWithParent(props.initialData.categoryId)
+    return {
+      ...props.initialData,
+      amount: props.initialData.amount,
+      type: props.initialData.type || 'expense',
+      categoryId: parent ? parent.id : (props.initialData.categoryId || ''),
+      subCategoryId: parent ? props.initialData.categoryId : '',
+      startDate: props.initialData.startDate ? props.initialData.startDate.split('T')[0] : new Date().toISOString().split('T')[0],
+      accountId: props.initialData.accountId || store.accounts[0]?.id || '1'
+    }
+  }
+  return {
+    description: '',      // 账单描述
+    amount: '',           // 金额
+    type: 'expense',      // 类型：支出/收入
+    categoryId: '',       // 不设置默认分类
+    subCategoryId: '',    // 子分类 ID
+    frequency: 'monthly', // 重复频率：每日/每周/每月/每年
+    startDate: new Date().toISOString().split('T')[0], // 开始日期
+    accountId: store.accounts[0]?.id || '1'           // 关联账户
+  }
+}
+
+const formData = ref(initializeForm())
 
 /**
  * 切换交易类型
@@ -35,9 +52,10 @@ const formData = ref({
  */
 const handleTypeChange = (type) => {
   formData.value.type = type
-  // 切换类型时，根据类型自动预选默认分类
-  formData.value.categoryId = type === 'expense' ? 'exp_other' : 'inc_other'
+  // 切换类型时，重置分类
+  formData.value.categoryId = ''
   formData.value.subCategoryId = ''
+  formError.value = ''
 }
 
 // --- 计算属性 ---
@@ -67,17 +85,23 @@ const flatCategories = computed(() => {
 /**
  * 处理分类选择变更，自动关联父分类 ID
  */
-const handleCategoryChange = (e) => {
-  const selectedId = e.target.value
-  const found = flatCategories.value.find(c => c.id === selectedId)
-  if (found.parentId) {
-    // 选中了子分类
-    formData.value.categoryId = found.parentId
-    formData.value.subCategoryId = found.id
-  } else {
-    // 选中了父分类
-    formData.value.categoryId = found.id
-    formData.value.subCategoryId = ''
+const handleCategoryChange = (selectedId) => {
+  if (!selectedId) return
+  
+  const targetId = String(selectedId)
+  const found = flatCategories.value.find(c => String(c.id) === targetId)
+  
+  if (found) {
+    if (found.parentId) {
+      // 选中了子分类
+      formData.value.categoryId = found.parentId
+      formData.value.subCategoryId = found.id
+    } else {
+      // 选中了父分类
+      formData.value.categoryId = found.id
+      formData.value.subCategoryId = ''
+    }
+    formError.value = '' // 清除错误信息
   }
 }
 
@@ -93,17 +117,62 @@ const frequencies = [
  * 提交表单逻辑
  */
 const handleSubmit = async () => {
+  // 防止重复提交
+  if (isSubmitting.value) return
   isSubmitting.value = true
-  const success = await store.addRecurringTransaction({
-    ...formData.value,
-    amount: Number(formData.value.amount),
-    startDate: new Date(formData.value.startDate).toISOString()
-  })
-  isSubmitting.value = false
   
-  if (success) {
-    emit('success')
-    emit('close')
+  formError.value = ''
+  
+  if (!formData.value.description || !formData.value.description.trim()) {
+    formError.value = '请输入描述'
+    isSubmitting.value = false
+    return
+  }
+
+  if (!formData.value.amount || Number(formData.value.amount) <= 0) {
+    formError.value = '请输入有效的金额'
+    isSubmitting.value = false
+    return
+  }
+
+  if (!formData.value.categoryId) {
+    formError.value = '请选择一个分类'
+    isSubmitting.value = false
+    return
+  }
+
+  try {
+    // 构造提交数据
+    const payload = {
+      ...formData.value,
+      categoryId: formData.value.subCategoryId || formData.value.categoryId,
+      amount: Number(formData.value.amount),
+      startDate: formData.value.startDate // 保持 yyyy-MM-dd 格式，由 API 映射处理
+    }
+    
+    // 移除前端使用的多余字段
+    delete payload.subCategoryId
+
+    console.log('Submitting recurring transaction:', payload)
+    const success = await store.addRecurringTransaction(payload)
+    
+    if (success) {
+      console.log('Recurring transaction added successfully, emitting success')
+      emit('success')
+      emit('close')
+    } else {
+      console.error('Failed to add recurring transaction')
+      formError.value = '保存失败，服务器返回异常'
+    }
+  } catch (error) {
+    console.error('Submit recurring transaction error:', error)
+    formError.value = '提交出错：' + (error.message || '网络请求失败')
+  } finally {
+    // 延迟重置提交状态，确保弹窗有关闭的时间，防止极速连击
+    setTimeout(() => {
+      console.log('Resetting isSubmitting status')
+      isSubmitting.value = false
+    }, 500)
   }
 }
 </script>
@@ -191,19 +260,30 @@ const handleSubmit = async () => {
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">分类</label>
                   <div class="relative">
-                    <Tag class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                    <select 
+                    <Tag class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
+                    <select
                       :value="formData.subCategoryId || formData.categoryId"
-                      @change="handleCategoryChange"
-                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none text-sm"
+                      @change="handleCategoryChange($event.target.value)"
+                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
+                      :class="formError && !formData.categoryId ? 'border-rose-500 bg-rose-50' : 'border-slate-200'"
                     >
                       <option value="" disabled>选择分类</option>
-                      <option v-for="cat in flatCategories" :key="cat.id" :value="cat.id">
-                        {{ cat.name }}
+                      <option
+                        v-for="item in flatCategories"
+                        :key="item.id"
+                        :value="item.id"
+                      >
+                        {{ item.name }}
                       </option>
                     </select>
                   </div>
                 </div>
+              </div>
+
+              <!-- 错误信息显示 -->
+              <div v-if="formError" class="px-4 py-2 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-sm animate-shake">
+                <Info :size="16" />
+                {{ formError }}
               </div>
 
               <!-- 频率与日期 -->
@@ -211,12 +291,18 @@ const handleSubmit = async () => {
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">重复频率</label>
                   <div class="relative">
-                    <Repeat class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                    <select 
+                    <Repeat class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
+                    <select
                       v-model="formData.frequency"
                       class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
                     >
-                      <option v-for="freq in frequencies" :key="freq.value" :value="freq.value">{{ freq.label }}</option>
+                      <option
+                        v-for="item in frequencies"
+                        :key="item.value"
+                        :value="item.value"
+                      >
+                        {{ item.label }}
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -228,7 +314,7 @@ const handleSubmit = async () => {
                       v-model="formData.startDate"
                       type="date" 
                       required
-                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none"
+                      class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none"
                     >
                   </div>
                 </div>
@@ -238,12 +324,18 @@ const handleSubmit = async () => {
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">结算账户</label>
                 <div class="relative">
-                  <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                  <select 
+                  <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
+                  <select
                     v-model="formData.accountId"
                     class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
                   >
-                    <option v-for="acc in store.accounts" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                    <option
+                      v-for="item in store.accounts"
+                      :key="item.id"
+                      :value="item.id"
+                    >
+                      {{ item.name }}
+                    </option>
                   </select>
                 </div>
               </div>

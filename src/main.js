@@ -6,6 +6,8 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Vue3Toastify, { toast } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 
 import './style.css'
 import App from './App.vue'
@@ -19,8 +21,11 @@ const pinia = createPinia()
 
 // 配置 Toast
 app.use(Vue3Toastify, {
-  autoClose: 3000,
+  autoClose: 1500,
   position: toast.POSITION.TOP_CENTER,
+  hideProgressBar: true, // 隐藏进度条，界面更简洁
+  transition: toast.TRANSITIONS.SLIDE, // 改用滑动动画
+  limit: 3, 
 });
 
 // 使用 Pinia 插件进行状态管理
@@ -28,6 +33,9 @@ app.use(pinia)
 
 // 使用 Vue Router 插件进行路由管理
 app.use(router)
+
+// 使用 Element Plus
+app.use(ElementPlus)
 
 // 将应用挂载到 index.html 中的 #app 容器
 app.mount('#app')

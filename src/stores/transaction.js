@@ -93,8 +93,13 @@ export const useTransactionStore = defineStore('transaction', () => {
   }
 
   async function fetchCategories() {
-    const res = await categoryApi.getCategories()
-    categories.value = res.data || res
+    try {
+      const res = await categoryApi.getCategories()
+      categories.value = res.data || res || []
+    } catch (error) {
+      console.error('Fetch categories error:', error)
+      categories.value = []
+    }
   }
 
   async function fetchGoals() {
@@ -495,15 +500,46 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
+  /**
+   * 根据ID查找分类（递归查找）
+   * @param {string|number} id 分类ID
+   * @param {Array} list 分类列表
+   */
   function findCategoryById(id, list = categories.value) {
+    if (id === null || id === undefined || id === '') return null
+    if (!Array.isArray(list)) return null
+
+    const targetId = String(id)
     for (const item of list) {
-      if (String(item.id) === String(id)) return item
-      if (item.children) {
+      if (item && String(item.id) === targetId) return item
+      if (item && item.children && Array.isArray(item.children) && item.children.length > 0) {
         const found = findCategoryById(id, item.children)
         if (found) return found
       }
     }
     return null
+  }
+
+  /**
+   * 查找分类及其父分类
+   * @param {string|number} id 分类ID
+   * @param {Array} list 分类列表
+   * @param {Object} parent 当前父分类
+   */
+  function findCategoryWithParent(id, list = categories.value, parent = null) {
+    if (id === null || id === undefined || id === '') return { category: null, parent: null }
+    
+    const targetId = String(id)
+    for (const item of list) {
+      if (item && String(item.id) === targetId) {
+        return { category: item, parent: parent }
+      }
+      if (item && item.children && Array.isArray(item.children) && item.children.length > 0) {
+        const found = findCategoryWithParent(id, item.children, item)
+        if (found && found.category) return found
+      }
+    }
+    return { category: null, parent: null }
   }
 
   async function setBudget(monthKey, budgetData) {
@@ -658,11 +694,19 @@ export const useTransactionStore = defineStore('transaction', () => {
     updateCategory,
     deleteCategory,
     findCategoryById,
+    findCategoryWithParent,
     toggleTagFilter,
     clearTagFilters,
     
     addGoal,
     updateGoalProgress,
-    deleteGoal
+    deleteGoal,
+    
+    // 通知桥接 (兼容旧组件)
+    addNotification: notificationStore.addNotification,
+    success: notificationStore.success,
+    error: notificationStore.error,
+    warning: notificationStore.warning,
+    info: notificationStore.info
   }
 })

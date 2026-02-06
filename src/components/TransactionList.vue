@@ -8,6 +8,7 @@ import { Trash2, Calendar, Tag, Edit2, ArrowRightLeft, Loader2, Utensils, Bike, 
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ref } from 'vue'
+import { ElMessageBox } from 'element-plus'
 
 const store = useTransactionStore()
 const emit = defineEmits(['edit', 'add'])
@@ -20,11 +21,25 @@ const deletingId = ref(null)
  */
 const handleDelete = async (id) => {
   if (deletingId.value) return
-  if (!confirm('确定要删除这条记录吗？')) return
-
-  deletingId.value = id
-  await store.deleteTransaction(id)
-  deletingId.value = null
+  
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这条交易记录吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    deletingId.value = id
+    await store.deleteTransaction(id)
+  } catch (e) {
+    // cancelled or failed
+  } finally {
+    deletingId.value = null
+  }
 }
 
 /**
@@ -77,14 +92,22 @@ const getAccountName = (accountId) => {
  * @param {Object} transaction 交易记录对象
  */
 const getCategoryInfo = (transaction) => {
-  if (transaction.type === 'transfer') return null
+  if (transaction.type === 'transfer') return { name: '转账', icon: 'ArrowRightLeft' }
   
-  const parent = store.findCategoryById(transaction.categoryId)
-  const sub = transaction.subCategoryId ? store.findCategoryById(transaction.subCategoryId) : null
+  // 优先从 store 中查找完整的分类信息
+  const { category, parent } = store.findCategoryWithParent(transaction.categoryId)
   
+  if (category) {
+    return {
+      name: parent ? `${parent.name} - ${category.name}` : category.name,
+      icon: category.icon || parent?.icon || 'HelpCircle'
+    }
+  }
+
+  // 如果 store 中找不到（可能还未加载或分类已被删除），则使用交易记录中自带的分类名称
   return {
-    name: sub ? `${parent?.name} · ${sub.name}` : (parent?.name || transaction.category || '未分类'),
-    icon: sub?.icon || parent?.icon || 'HelpCircle'
+    name: transaction.category || '未分类',
+    icon: 'HelpCircle'
   }
 }
 
