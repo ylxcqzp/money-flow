@@ -10,6 +10,7 @@ import {
   Plus, Trash2, Edit2, Wallet, CreditCard, Smartphone, MessageCircle, 
   Save, X, Check, Info
 } from 'lucide-vue-next'
+import BaseSelect from './BaseSelect.vue'
 
 // --- 状态与初始化 ---
 
@@ -33,6 +34,11 @@ const icons = [
   { name: 'CreditCard', component: CreditCard, label: '银行卡' },
   { name: 'Smartphone', component: Smartphone, label: '手机支付' },
   { name: 'MessageCircle', component: MessageCircle, label: '微信/聊天' }
+]
+
+const accountTypeOptions = [
+  { value: 'cash', label: '现金账户' },
+  { value: 'card', label: '银行卡/电子钱包' }
 ]
 
 // --- 逻辑方法 ---
@@ -233,13 +239,11 @@ const handleDelete = async (id) => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">账户类型</label>
-            <select 
+            <BaseSelect 
               v-model="newAccount.type"
-              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all text-sm font-medium appearance-none"
-            >
-              <option value="cash">现金账户</option>
-              <option value="card">银行卡/电子钱包</option>
-            </select>
+              :options="accountTypeOptions"
+              placeholder="选择账户类型"
+            />
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">选择图标</label>

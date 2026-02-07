@@ -10,50 +10,74 @@
 所有受保护的接口需要在 Request Header 中携带 JWT Token：
 `Authorization: Bearer <token>`
 
-### 响应格式
-建议采用统一响应结构：
+### 统一响应结构
+后端统一返回结构为：
+- `code`: 业务状态码，0 表示成功
+- `message`: 提示信息
+- `data`: 业务数据
+
+响应示例：
 ```json
 {
-  "code": 0,      // 0 表示成功，非 0 表示业务错误  
-  "msg": "success", // 提示信息
-  "data": { ... }   // 业务数据
+  "code": 0,
+  "message": "success",
+  "data": {}
 }
 ```
-*注：前端 request 拦截器目前会直接返回 response.data，请确保后端返回的数据结构符合预期。如果直接返回数据对象也是可以的，前端代码已做简单兼容。建议为了扩展性使用上述包装结构。*
 
 ---
 
 ## 1. 认证 (Auth)
 
 ### 1.1 用户登录
-- **URL**: `/auth/login`
+- **URL**: `/api/auth/login`
 - **Method**: `POST`
 - **描述**: 邮箱密码登录
-- **Request Body**:
+- **Request Body 参数**:
+  - `email` (string, 必填): 用户邮箱
+  - `password` (string, 必填): 登录密码，长度 8-64
+- **Request Body 示例**:
   ```json
   {
     "email": "user@example.com",
     "password": "password123"
   }
   ```
-- **Response**:
+- **Response data 字段**:
+  - `token` (string): JWT Token
+  - `user` (object): 用户信息
+  - `user.id` (number): 用户ID
+  - `user.username` (string): 用户名
+  - `user.nickname` (string): 昵称
+  - `user.email` (string): 邮箱
+  - `user.avatarUrl` (string): 头像地址
+- **Response 示例**:
   ```json
   {
-    "token": "jwt-token-string",
-    "user": {
-      "id": 1,
-      "username": "User",
-      "email": "user@example.com",
-      "avatar_url": "..."
+    "code": 0,
+    "message": "success",
+    "data": {
+      "token": "jwt-token-string",
+      "user": {
+        "id": 1,
+        "username": "User",
+        "nickname": "User",
+        "email": "user@example.com",
+        "avatarUrl": "https://example.com/avatar.png"
+      }
     }
   }
   ```
 
 ### 1.2 用户注册
-- **URL**: `/auth/register`
+- **URL**: `/api/auth/register`
 - **Method**: `POST`
 - **描述**: 注册新用户
-- **Request Body**:
+- **Request Body 参数**:
+  - `username` (string, 必填): 用户名，长度 2-30
+  - `email` (string, 必填): 邮箱
+  - `password` (string, 必填): 登录密码，长度 8-64
+- **Request Body 示例**:
   ```json
   {
     "username": "Nickname",
@@ -61,27 +85,66 @@
     "password": "password123"
   }
   ```
-- **Response**: 同登录接口，返回 token 和用户信息。
-
-### 1.3 获取当前用户信息
-- **URL**: `/auth/me`
-- **Method**: `GET`
-- **Response**:
+- **Response data 字段**: 同登录接口
+- **Response 示例**:
   ```json
   {
-    "user": { ... }
+    "code": 0,
+    "message": "success",
+    "data": {
+      "token": "jwt-token-string",
+      "user": {
+        "id": 2,
+        "username": "Nickname",
+        "nickname": "Nickname",
+        "email": "user@example.com",
+        "avatarUrl": "https://example.com/avatar.png"
+      }
+    }
+  }
+  ```
+
+### 1.3 获取当前用户信息
+- **URL**: `/api/auth/me`
+- **Method**: `GET`
+- **描述**: 获取当前登录用户信息
+- **Query Params**: 无
+- **Response data 字段**:
+  - `user` (object): 用户信息
+  - `user.id` (number): 用户ID
+  - `user.username` (string): 用户名
+  - `user.nickname` (string): 昵称
+  - `user.email` (string): 邮箱
+  - `user.avatarUrl` (string): 头像地址
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "user": {
+        "id": 1,
+        "username": "User",
+        "nickname": "User",
+        "email": "user@example.com",
+        "avatarUrl": "https://example.com/avatar.png"
+      }
+    }
   }
   ```
 
 ### 1.4 退出登录
-- **URL**: `/auth/logout`
+- **URL**: `/api/auth/logout`
 - **Method**: `POST`
-- **描述**: 清除服务端 Session 或记录 Token 失效（可选）。
-- **Response**:
+- **描述**: 退出登录
+- **Request Body**: 无
+- **Response data 字段**: 无
+- **Response 示例**:
   ```json
   {
-    "code": 200,
-    "msg": "success"
+    "code": 0,
+    "message": "success",
+    "data": null
   }
   ```
 
@@ -90,170 +153,474 @@
 ## 2. 账户 (Account)
 
 ### 2.1 获取账户列表
-- **URL**: `/accounts`
+- **URL**: `/api/accounts`
 - **Method**: `GET`
-- **描述**: 获取当前用户的所有资产账户，包含实时余额。
-- **Response**:
+- **描述**: 获取当前用户的资产账户列表
+- **Query Params**: 无
+- **Response data 字段**:
+  - `id` (number): 账户ID
+  - `name` (string): 账户名称
+  - `type` (string): 账户类型
+  - `icon` (string): 账户图标
+  - `initialBalance` (number): 初始余额
+  - `currentBalance` (number): 当前余额
+  - `sortOrder` (number): 排序值
+- **前端查询示例**: `/api/accounts`
+- **Response 示例**:
   ```json
-  [
-    {
-      "id": 1,
-      "name": "现金",
-      "type": "cash", // cash, card, alipay, wechat, other
-      "icon": "Wallet",
-      "initialBalance": 1000.00,
-      "currentBalance": 1500.00, // 后端需计算当前余额
-      "sortOrder": 0
-    }
-  ]
+  {
+    "code": 0,
+    "message": "success",
+    "data": [
+      {
+        "id": 1,
+        "name": "现金",
+        "type": "cash",
+        "icon": "Wallet",
+        "initialBalance": 1000.00,
+        "currentBalance": 1500.00,
+        "sortOrder": 0
+      }
+    ]
+  }
   ```
 
 ### 2.2 创建账户
-- **URL**: `/accounts`
+- **URL**: `/api/accounts`
 - **Method**: `POST`
-- **Request Body**:
+- **描述**: 创建资产账户
+- **Request Body 参数**:
+  - `name` (string, 必填): 账户名称
+  - `type` (string, 必填): 账户类型
+  - `icon` (string, 可选): 账户图标
+  - `initialBalance` (number, 必填): 初始余额
+  - `sortOrder` (number, 可选): 排序值
+- **Request Body 示例**:
   ```json
   {
     "name": "招商银行",
     "type": "card",
     "icon": "CreditCard",
-    "initialBalance": 5000.00
+    "initialBalance": 5000.00,
+    "sortOrder": 1
+  }
+  ```
+- **Response data 字段**: 同账户列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 3,
+      "name": "招商银行",
+      "type": "card",
+      "icon": "CreditCard",
+      "initialBalance": 5000.00,
+      "currentBalance": 5000.00,
+      "sortOrder": 1
+    }
   }
   ```
 
 ### 2.3 更新账户
-- **URL**: `/accounts/:id`
+- **URL**: `/api/accounts/{id}`
 - **Method**: `PUT`
-- **Request Body**: 需更新的字段
+- **描述**: 更新账户信息
+- **Path Params**:
+  - `id` (number, 必填): 账户ID
+- **Request Body 参数**:
+  - `name` (string, 可选): 账户名称
+  - `type` (string, 可选): 账户类型
+  - `icon` (string, 可选): 账户图标
+  - `initialBalance` (number, 可选): 初始余额
+  - `sortOrder` (number, 可选): 排序值
+- **Request Body 示例**:
+  ```json
+  {
+    "name": "工资卡",
+    "icon": "BankCard",
+    "sortOrder": 2
+  }
+  ```
+- **Response data 字段**: 同账户列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 3,
+      "name": "工资卡",
+      "type": "card",
+      "icon": "BankCard",
+      "initialBalance": 5000.00,
+      "currentBalance": 5200.00,
+      "sortOrder": 2
+    }
+  }
+  ```
 
 ### 2.4 删除账户
-- **URL**: `/accounts/:id`
+- **URL**: `/api/accounts/{id}`
 - **Method**: `DELETE`
+- **描述**: 删除账户
+- **Path Params**:
+  - `id` (number, 必填): 账户ID
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
+  }
+  ```
 
 ---
 
 ## 3. 分类 (Category)
 
 ### 3.1 获取分类列表
-- **URL**: `/categories`
+- **URL**: `/api/categories`
 - **Method**: `GET`
+- **描述**: 获取分类列表
 - **Query Params**:
-  - `type`: `expense` | `income` (可选，不传则返回所有)
-- **Response**:
+  - `type` (string, 可选): 分类类型
+- **前端查询示例**: `/api/categories?type=expense`
+- **Response data 字段**:
+  - `id` (number): 分类ID
+  - `name` (string): 分类名称
+  - `type` (string): 分类类型
+  - `icon` (string): 分类图标
+  - `parentId` (number): 父级分类ID
+  - `sortOrder` (number): 排序值
+  - `children` (array): 子分类列表
+- **Response 示例**:
   ```json
-  [
-    {
-      "id": 1,
-      "name": "餐饮",
-      "type": "expense",
-      "icon": "Utensils",
-      "parentId": 0, // 0 或 null 表示一级分类
-      "children": [ ... ] // 树形结构
-    }
-  ]
+  {
+    "code": 0,
+    "message": "success",
+    "data": [
+      {
+        "id": 1,
+        "name": "餐饮",
+        "type": "expense",
+        "icon": "Utensils",
+        "parentId": 0,
+        "sortOrder": 0,
+        "children": [
+          {
+            "id": 11,
+            "name": "夜宵",
+            "type": "expense",
+            "icon": "Food",
+            "parentId": 1,
+            "sortOrder": 0,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
   ```
 
 ### 3.2 创建分类
-- **URL**: `/categories`
+- **URL**: `/api/categories`
 - **Method**: `POST`
-- **Request Body**:
+- **描述**: 创建分类
+- **Request Body 参数**:
+  - `name` (string, 必填): 分类名称
+  - `type` (string, 必填): 分类类型
+  - `icon` (string, 可选): 分类图标
+  - `parentId` (number, 可选): 父级分类ID
+  - `sortOrder` (number, 可选): 排序值
+- **Request Body 示例**:
   ```json
   {
     "name": "夜宵",
     "type": "expense",
     "icon": "Food",
-    "parentId": 1
+    "parentId": 1,
+    "sortOrder": 0
+  }
+  ```
+- **Response data 字段**: 同分类列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 11,
+      "name": "夜宵",
+      "type": "expense",
+      "icon": "Food",
+      "parentId": 1,
+      "sortOrder": 0,
+      "children": []
+    }
   }
   ```
 
 ### 3.3 更新分类
-- **URL**: `/categories/:id`
+- **URL**: `/api/categories/{id}`
 - **Method**: `PUT`
+- **描述**: 更新分类
+- **Path Params**:
+  - `id` (number, 必填): 分类ID
+- **Request Body 参数**:
+  - `name` (string, 可选): 分类名称
+  - `type` (string, 可选): 分类类型
+  - `icon` (string, 可选): 分类图标
+  - `parentId` (number, 可选): 父级分类ID
+  - `sortOrder` (number, 可选): 排序值
+- **Request Body 示例**:
+  ```json
+  {
+    "name": "早餐"
+  }
+  ```
+- **Response data 字段**: 同分类列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 11,
+      "name": "早餐",
+      "type": "expense",
+      "icon": "Food",
+      "parentId": 1,
+      "sortOrder": 0,
+      "children": []
+    }
+  }
+  ```
 
 ### 3.4 删除分类
-- **URL**: `/categories/:id`
+- **URL**: `/api/categories/{id}`
 - **Method**: `DELETE`
+- **描述**: 删除分类
+- **Path Params**:
+  - `id` (number, 必填): 分类ID
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
+  }
+  ```
 
 ---
 
 ## 4. 交易 (Transaction)
 
 ### 4.1 获取交易列表
-- **URL**: `/transactions`
+- **URL**: `/api/transactions`
 - **Method**: `GET`
+- **描述**: 获取交易列表
 - **Query Params**:
-  - `startDate`: `2026-01-01`
-  - `endDate`: `2026-01-31`
-  - `type`: `expense` | `income` | `transfer` | `all`
-  - `categoryId`: (可选)
-  - `accountId`: (可选)
-  - `tags`: (可选，逗号分隔)
-- **Response**:
+  - `startDate` (string, 可选): 开始日期，格式 yyyy-MM-dd
+  - `endDate` (string, 可选): 结束日期，格式 yyyy-MM-dd
+  - `type` (string, 可选): 交易类型
+  - `categoryId` (number, 可选): 分类ID
+  - `accountId` (number, 可选): 账户ID
+  - `tags` (string, 可选): 标签列表，逗号分隔
+- **前端查询示例**: `/api/transactions?startDate=2026-02-01&endDate=2026-02-29&type=expense&accountId=1&tags=工作餐,外卖`
+- **Response data 字段**:
+  - `id` (number): 交易ID
+  - `type` (string): 交易类型
+  - `amount` (number): 金额
+  - `date` (string): 发生日期
+  - `categoryId` (number): 分类ID
+  - `accountId` (number): 主账户ID
+  - `targetAccountId` (number): 目标账户ID
+  - `note` (string): 备注
+  - `tags` (array): 标签列表
+- **Response 示例**:
   ```json
-  [
-    {
-      "id": 1001,
-      "type": "expense",
-      "amount": 50.00,
-      "date": "2026-02-04",
-      "categoryId": 10,
-      "subCategoryId": 11,
-      "accountId": 1,
-      "note": "午餐",
-      "tags": "工作餐,外卖" // 建议返回数组或逗号分隔字符串
-    }
-  ]
+  {
+    "code": 0,
+    "message": "success",
+    "data": [
+      {
+        "id": 1001,
+        "type": "expense",
+        "amount": 50.00,
+        "date": "2026-02-04",
+        "categoryId": 10,
+        "accountId": 1,
+        "targetAccountId": null,
+        "note": "午餐",
+        "tags": [
+          "工作餐",
+          "外卖"
+        ]
+      }
+    ]
+  }
   ```
 
 ### 4.2 创建交易
-- **URL**: `/transactions`
+- **URL**: `/api/transactions`
 - **Method**: `POST`
-- **Request Body**:
+- **描述**: 创建交易
+- **Request Body 参数**:
+  - `type` (string, 必填): 交易类型
+  - `amount` (number, 必填): 金额，大于 0
+  - `currency` (string, 可选): 原币种
+  - `originalAmount` (number, 可选): 原币种金额
+  - `date` (string, 必填): 发生日期，格式 yyyy-MM-dd
+  - `categoryId` (number, 可选): 分类ID
+  - `accountId` (number, 必填): 主账户ID
+  - `targetAccountId` (number, 可选): 目标账户ID
+  - `note` (string, 可选): 备注
+  - `tags` (array, 可选): 标签列表
+- **Request Body 示例**:
   ```json
   {
     "type": "expense",
     "amount": 50.00,
+    "currency": "CNY",
+    "originalAmount": 50.00,
     "date": "2026-02-04",
     "categoryId": 10,
     "accountId": 1,
     "note": "备注",
-    "tags": ["tag1", "tag2"]
+    "tags": [
+      "tag1",
+      "tag2"
+    ]
+  }
+  ```
+- **Response data 字段**: 同交易列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1002,
+      "type": "expense",
+      "amount": 50.00,
+      "date": "2026-02-04",
+      "categoryId": 10,
+      "accountId": 1,
+      "targetAccountId": null,
+      "note": "备注",
+      "tags": [
+        "tag1",
+        "tag2"
+      ]
+    }
   }
   ```
 
 ### 4.3 更新交易
-- **URL**: `/transactions/:id`
+- **URL**: `/api/transactions/{id}`
 - **Method**: `PUT`
+- **描述**: 更新交易
+- **Path Params**:
+  - `id` (number, 必填): 交易ID
+- **Request Body 参数**:
+  - `type` (string, 可选): 交易类型
+  - `amount` (number, 可选): 金额
+  - `date` (string, 可选): 发生日期，格式 yyyy-MM-dd
+  - `categoryId` (number, 可选): 分类ID
+  - `accountId` (number, 可选): 主账户ID
+  - `targetAccountId` (number, 可选): 目标账户ID
+  - `note` (string, 可选): 备注
+  - `tags` (array, 可选): 标签列表
+- **Request Body 示例**:
+  ```json
+  {
+    "amount": 60.00,
+    "note": "修改后的备注"
+  }
+  ```
+- **Response data 字段**: 同交易列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1002,
+      "type": "expense",
+      "amount": 60.00,
+      "date": "2026-02-04",
+      "categoryId": 10,
+      "accountId": 1,
+      "targetAccountId": null,
+      "note": "修改后的备注",
+      "tags": [
+        "tag1",
+        "tag2"
+      ]
+    }
+  }
+  ```
 
 ### 4.4 删除交易
-- **URL**: `/transactions/:id`
+- **URL**: `/api/transactions/{id}`
 - **Method**: `DELETE`
+- **描述**: 删除交易
+- **Path Params**:
+  - `id` (number, 必填): 交易ID
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
+  }
+  ```
 
 ---
 
 ## 5. 预算 (Budget)
 
 ### 5.1 获取月度预算
-- **URL**: `/budgets`
+- **URL**: `/api/budgets`
 - **Method**: `GET`
+- **描述**: 获取指定月份预算
 - **Query Params**:
-  - `month`: `2026-02`
-- **Response**:
+  - `month` (string, 必填): 月份，格式 yyyy-MM
+- **前端查询示例**: `/api/budgets?month=2026-02`
+- **Response data 字段**:
+  - `month` (string): 月份
+  - `total` (number): 总预算
+  - `categories` (object): 分类预算映射
+- **Response 示例**:
   ```json
   {
-    "month": "2026-02",
-    "total": 5000.00,
-    "categories": {
-      "10": 1000.00, // categoryId: amount
-      "20": 500.00
+    "code": 0,
+    "message": "success",
+    "data": {
+      "month": "2026-02",
+      "total": 5000.00,
+      "categories": {
+        "10": 1000.00,
+        "20": 500.00
+      }
     }
   }
   ```
 
 ### 5.2 设置/更新预算
-- **URL**: `/budgets`
+- **URL**: `/api/budgets`
 - **Method**: `POST`
-- **Request Body**:
+- **描述**: 设置或更新预算
+- **Request Body 参数**:
+  - `month` (string, 必填): 月份，格式 yyyy-MM
+  - `total` (number, 必填): 总预算
+  - `categories` (object, 可选): 分类预算映射
+- **Request Body 示例**:
   ```json
   {
     "month": "2026-02",
@@ -263,48 +630,168 @@
     }
   }
   ```
+- **Response data 字段**: 同获取月度预算
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "month": "2026-02",
+      "total": 5000.00,
+      "categories": {
+        "10": 1000.00
+      }
+    }
+  }
+  ```
 
 ---
 
 ## 6. 周期性规则 (Recurring Rule)
 
 ### 6.1 获取规则列表
-- **URL**: `/recurring-rules`
+- **URL**: `/api/recurring-rules`
 - **Method**: `GET`
+- **描述**: 获取周期性规则列表
+- **Query Params**: 无
+- **前端查询示例**: `/api/recurring-rules`
+- **Response data 字段**:
+  - `id` (number): 规则ID
+  - `type` (string): 类型
+  - `amount` (number): 金额
+  - `categoryId` (number): 分类ID
+  - `accountId` (number): 账户ID
+  - `frequency` (string): 频率
+  - `description` (string): 描述
+  - `startDate` (string): 开始日期
+  - `nextExecutionDate` (string): 下次执行日期
+  - `status` (number): 状态
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": [
+      {
+        "id": 1,
+        "type": "expense",
+        "amount": 3000.00,
+        "categoryId": 20,
+        "accountId": 1,
+        "frequency": "monthly",
+        "description": "房租",
+        "startDate": "2026-03-01",
+        "nextExecutionDate": "2026-04-01",
+        "status": 0
+      }
+    ]
+  }
+  ```
 
 ### 6.2 创建规则
-- **URL**: `/recurring-rules`
+- **URL**: `/api/recurring-rules`
 - **Method**: `POST`
-- **Request Body**:
+- **描述**: 创建周期性规则
+- **Request Body 参数**:
+  - `type` (string, 必填): 类型
+  - `amount` (number, 必填): 金额，大于 0
+  - `frequency` (string, 必填): 频率
+  - `startDate` (string, 必填): 开始日期，格式 yyyy-MM-dd
+  - `categoryId` (number, 必填): 分类ID
+  - `accountId` (number, 必填): 账户ID
+  - `description` (string, 可选): 描述
+  - `status` (number, 可选): 状态
+- **Request Body 示例**:
   ```json
   {
     "type": "expense",
     "amount": 3000,
-    "frequency": "monthly", // daily, weekly, monthly, yearly
+    "frequency": "monthly",
     "startDate": "2026-03-01",
     "categoryId": 20,
     "accountId": 1,
-    "description": "房租"
+    "description": "房租",
+    "status": 0
+  }
+  ```
+- **Response data 字段**: 同规则列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1,
+      "type": "expense",
+      "amount": 3000.00,
+      "categoryId": 20,
+      "accountId": 1,
+      "frequency": "monthly",
+      "description": "房租",
+      "startDate": "2026-03-01",
+      "nextExecutionDate": "2026-04-01",
+      "status": 0
+    }
   }
   ```
 
-### 6.3 删除规则
-- **URL**: `/recurring-rules/:id`
-- **Method**: `DELETE`
-
-### 6.4 生成周期性交易
-- **URL**: `/recurring-rules/generate`
-- **Method**: `POST`
-- **描述**: 触发后端检查所有周期性规则，自动生成符合条件的交易记录
-- **Response**:
+### 6.3 更新规则
+- **URL**: `/api/recurring-rules/{id}`
+- **Method**: `PUT`
+- **描述**: 更新周期性规则
+- **Path Params**:
+  - `id` (number, 必填): 规则ID
+- **Request Body 参数**:
+  - `type` (string, 可选): 类型
+  - `amount` (number, 可选): 金额
+  - `frequency` (string, 可选): 频率
+  - `startDate` (string, 可选): 开始日期，格式 yyyy-MM-dd
+  - `categoryId` (number, 可选): 分类ID
+  - `accountId` (number, 可选): 账户ID
+  - `description` (string, 可选): 描述
+  - `status` (number, 可选): 状态
+- **Request Body 示例**:
   ```json
   {
-    "code": 200,
-    "msg": "success",
+    "amount": 3200.00,
+    "description": "房租调整"
+  }
+  ```
+- **Response data 字段**: 同规则列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
     "data": {
-      "generated": 5, // 生成的交易数量
-      "transactions": [ ... ] // 生成的交易列表
+      "id": 1,
+      "type": "expense",
+      "amount": 3200.00,
+      "categoryId": 20,
+      "accountId": 1,
+      "frequency": "monthly",
+      "description": "房租调整",
+      "startDate": "2026-03-01",
+      "nextExecutionDate": "2026-04-01",
+      "status": 0
     }
+  }
+  ```
+
+### 6.4 删除规则
+- **URL**: `/api/recurring-rules/{id}`
+- **Method**: `DELETE`
+- **描述**: 删除周期性规则
+- **Path Params**:
+  - `id` (number, 必填): 规则ID
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
   }
   ```
 
@@ -313,28 +800,165 @@
 ## 7. 储蓄目标 (Goal)
 
 ### 7.1 获取目标列表
-- **URL**: `/goals`
+- **URL**: `/api/goals`
 - **Method**: `GET`
-
-### 7.2 创建目标
-- **URL**: `/goals`
-- **Method**: `POST`
-
-### 7.3 更新目标
-- **URL**: `/goals/:id`
-- **Method**: `PUT`
-
-### 7.4 删除目标
-- **URL**: `/goals/:id`
-- **Method**: `DELETE`
-
-### 7.5 存取款记录
-- **URL**: `/goals/:id/records`
-- **Method**: `POST`
-- **Request Body**:
+- **描述**: 获取储蓄目标列表
+- **Query Params**: 无
+- **前端查询示例**: `/api/goals`
+- **Response data 字段**:
+  - `id` (number): 目标ID
+  - `name` (string): 目标名称
+  - `targetAmount` (number): 目标金额
+  - `currentAmount` (number): 当前金额
+  - `deadline` (string): 截止日期
+  - `icon` (string): 图标
+  - `color` (string): 颜色
+  - `status` (string): 状态
+- **Response 示例**:
   ```json
   {
-    "amount": 1000,
+    "code": 0,
+    "message": "success",
+    "data": [
+      {
+        "id": 1,
+        "name": "旅行基金",
+        "targetAmount": 8000.00,
+        "currentAmount": 2000.00,
+        "deadline": "2026-12-31",
+        "icon": "Plane",
+        "color": "#FFAA00",
+        "status": "active"
+      }
+    ]
+  }
+  ```
+
+### 7.2 创建目标
+- **URL**: `/api/goals`
+- **Method**: `POST`
+- **描述**: 创建储蓄目标
+- **Request Body 参数**:
+  - `name` (string, 必填): 目标名称
+  - `targetAmount` (number, 必填): 目标金额，大于 0
+  - `deadline` (string, 可选): 截止日期，格式 yyyy-MM-dd
+  - `icon` (string, 可选): 图标
+  - `color` (string, 可选): 颜色
+- **Request Body 示例**:
+  ```json
+  {
+    "name": "旅行基金",
+    "targetAmount": 8000.00,
+    "deadline": "2026-12-31",
+    "icon": "Plane",
+    "color": "#FFAA00"
+  }
+  ```
+- **Response data 字段**: 同目标列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1,
+      "name": "旅行基金",
+      "targetAmount": 8000.00,
+      "currentAmount": 0.00,
+      "deadline": "2026-12-31",
+      "icon": "Plane",
+      "color": "#FFAA00",
+      "status": "active"
+    }
+  }
+  ```
+
+### 7.3 更新目标
+- **URL**: `/api/goals/{id}`
+- **Method**: `PUT`
+- **描述**: 更新储蓄目标
+- **Path Params**:
+  - `id` (number, 必填): 目标ID
+- **Request Body 参数**:
+  - `name` (string, 可选): 目标名称
+  - `targetAmount` (number, 可选): 目标金额
+  - `deadline` (string, 可选): 截止日期，格式 yyyy-MM-dd
+  - `icon` (string, 可选): 图标
+  - `color` (string, 可选): 颜色
+  - `status` (string, 可选): 状态
+- **Request Body 示例**:
+  ```json
+  {
+    "targetAmount": 9000.00,
+    "status": "active"
+  }
+  ```
+- **Response data 字段**: 同目标列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1,
+      "name": "旅行基金",
+      "targetAmount": 9000.00,
+      "currentAmount": 2000.00,
+      "deadline": "2026-12-31",
+      "icon": "Plane",
+      "color": "#FFAA00",
+      "status": "active"
+    }
+  }
+  ```
+
+### 7.4 删除目标
+- **URL**: `/api/goals/{id}`
+- **Method**: `DELETE`
+- **描述**: 删除储蓄目标
+- **Path Params**:
+  - `id` (number, 必填): 目标ID
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
+  }
+  ```
+
+### 7.5 新增目标存取记录
+- **URL**: `/api/goals/{id}/records`
+- **Method**: `POST`
+- **描述**: 新增目标存取记录
+- **Path Params**:
+  - `id` (number, 必填): 目标ID
+- **Request Body 参数**:
+  - `amount` (number, 必填): 操作金额
+  - `operateDate` (string, 可选): 操作日期，格式 yyyy-MM-dd
+- **Request Body 示例**:
+  ```json
+  {
+    "amount": 1000.00,
     "operateDate": "2026-02-04"
+  }
+  ```
+- **Response data 字段**: 同目标列表
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": 1,
+      "name": "旅行基金",
+      "targetAmount": 8000.00,
+      "currentAmount": 3000.00,
+      "deadline": "2026-12-31",
+      "icon": "Plane",
+      "color": "#FFAA00",
+      "status": "active"
+    }
   }
   ```

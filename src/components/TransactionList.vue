@@ -75,7 +75,10 @@ const formatForeignCurrency = (value, currencyCode) => {
  * @param {string} dateStr 日期字符串
  */
 const formatDate = (dateStr) => {
-  return format(new Date(dateStr), 'yyyy年MM月dd日', { locale: zhCN })
+  if (!dateStr) return '无日期'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '无效日期'
+  return format(date, 'yyyy年MM月dd日', { locale: zhCN })
 }
 
 /**
@@ -260,8 +263,8 @@ const getIcon = (name) => {
                   </h3>
 
                   <!-- Description / Remark -->
-                  <p v-if="transaction.description" class="text-sm text-slate-500 mt-1 line-clamp-1">
-                    {{ transaction.description }}
+                  <p v-if="transaction.note" class="text-sm text-slate-500 mt-1 line-clamp-1">
+                    {{ transaction.note }}
                   </p>
 
                   <!-- Meta Info -->
@@ -278,11 +281,11 @@ const getIcon = (name) => {
                     </span>
                     <span v-else class="flex items-center gap-1.5 text-[11px] font-bold">
                       <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
-                        {{ getAccountName(transaction.fromAccountId) }}
+                        {{ getAccountName(transaction.accountId) }}
                       </span>
                       <ArrowRightLeft :size="10" class="text-slate-300" />
                       <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">
-                        {{ getAccountName(transaction.toAccountId) }}
+                        {{ getAccountName(transaction.targetAccountId) }}
                       </span>
                     </span>
 

@@ -5,7 +5,15 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
-import { Check, X, ChevronRight, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle, Tag as TagIcon, Hash, RefreshCw, Calendar, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw } from 'lucide-vue-next'
+import { 
+  Check, X, ChevronRight, HelpCircle, Tag as TagIcon, Hash, RefreshCw, Calendar, Wallet, ArrowRightLeft,
+  Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, 
+  Banknote, Trophy, TrendingUp, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, 
+  Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, 
+  Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw
+} from 'lucide-vue-next'
+import BaseSelect from './BaseSelect.vue'
+import BaseDatePicker from './BaseDatePicker.vue'
 
 const props = defineProps({
   initialData: {
@@ -30,13 +38,15 @@ const currencies = [
 // 获取当前日期字符串 (yyyy-MM-dd)
 const getTodayStr = () => new Date().toISOString().split('T')[0]
 
+const currencyOptions = computed(() => currencies.map(c => ({ value: c.code, label: c.code })))
+
 // 表单响应式状态
 const initializeForm = () => {
   if (props.initialData) {
     const { category, parent } = store.findCategoryWithParent(props.initialData.categoryId)
     return { 
       ...props.initialData,
-      date: props.initialData.date ? new Date(props.initialData.date).toISOString().split('T')[0] : getTodayStr(),
+      date: (props.initialData.date && !isNaN(new Date(props.initialData.date).getTime())) ? new Date(props.initialData.date).toISOString().split('T')[0] : getTodayStr(),
       currency: props.initialData.currency || store.baseCurrency,
       accountId: props.initialData.accountId || '1',
       fromAccountId: props.initialData.fromAccountId || '1',
@@ -225,7 +235,7 @@ const handleSubmit = async () => {
 <template>
   <form @submit.prevent="handleSubmit" class="flex flex-col max-h-[calc(90vh-120px)]">
     <!-- 可滚动区域 -->
-    <div class="flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+    <div class="flex-1 overflow-y-auto custom-scrollbar px-1">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 pb-4">
         <!-- Type Switcher -->
         <div class="md:col-span-2 flex p-1.5 bg-slate-100 rounded-2xl mb-2">
@@ -274,18 +284,11 @@ const handleSubmit = async () => {
           <div class="flex gap-2">
             <!-- Currency Selector -->
             <div class="w-28 shrink-0">
-              <select
+              <BaseSelect
                 v-model="form.currency"
-                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all font-bold appearance-none"
-              >
-                <option
-                  v-for="c in currencies"
-                  :key="c.code"
-                  :value="c.code"
-                >
-                  {{ c.code }}
-                </option>
-              </select>
+                :options="currencyOptions"
+                :disabled="false"
+              />
             </div>
             <!-- Amount Input -->
             <div class="relative flex-1">
@@ -296,7 +299,7 @@ const handleSubmit = async () => {
                 step="0.01"
                 required
                 placeholder="0.00"
-                class="w-full pl-9 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-xl font-bold"
+                class="w-full pl-12 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all text-xl font-bold"
               />
             </div>
           </div>
@@ -315,71 +318,42 @@ const handleSubmit = async () => {
         <!-- Date Selection -->
         <div class="space-y-2">
           <label class="block text-sm font-bold text-slate-700">日期</label>
-          <div class="relative">
-            <Calendar :size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              v-model="form.date"
-              type="date" 
-              required
-              class="w-full pl-11 pr-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base appearance-none"
-            />
-          </div>
+          <BaseDatePicker
+            v-model="form.date"
+            placeholder="选择日期"
+          />
         </div>
 
         <!-- Account -->
         <div v-if="form.type !== 'transfer'" class="space-y-2">
           <label class="block text-sm font-bold text-slate-700">账户</label>
-          <div class="relative">
-            <select
-              v-model="form.accountId"
-              class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
-            >
-              <option
-                v-for="acc in store.accounts"
-                :key="acc.id"
-                :value="acc.id"
-              >
-                {{ acc.name }}
-              </option>
-            </select>
-          </div>
+          <BaseSelect
+            v-model="form.accountId"
+            :options="store.accounts"
+            placeholder="选择账户"
+            :icon="Wallet"
+          />
         </div>
 
         <!-- Transfer Accounts -->
         <div v-else class="grid grid-cols-2 gap-4">
           <div class="space-y-2">
             <label class="block text-sm font-bold text-slate-700">转出</label>
-            <div class="relative">
-              <select
-                v-model="form.fromAccountId"
-                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
-              >
-                <option
-                  v-for="acc in store.accounts"
-                  :key="acc.id"
-                  :value="acc.id"
-                >
-                  {{ acc.name }}
-                </option>
-              </select>
-            </div>
+            <BaseSelect
+              v-model="form.fromAccountId"
+              :options="store.accounts"
+              placeholder="转出账户"
+              :icon="Wallet"
+            />
           </div>
           <div class="space-y-2">
             <label class="block text-sm font-bold text-slate-700">转入</label>
-            <div class="relative">
-              <select
-                v-model="form.toAccountId"
-                class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none"
-              >
-                <option
-                  v-for="acc in store.accounts"
-                  :key="acc.id"
-                  :value="acc.id"
-                >
-                  {{ acc.name }}
-                </option>
-              </select>
-            </div>
+            <BaseSelect
+              v-model="form.toAccountId"
+              :options="store.accounts"
+              placeholder="转入账户"
+              :icon="Wallet"
+            />
           </div>
         </div>
 
@@ -387,7 +361,7 @@ const handleSubmit = async () => {
         <div class="space-y-2">
           <label class="block text-sm font-bold text-slate-700">备注 <span class="text-slate-400 font-normal">(选填)</span></label>
           <input 
-            v-model="form.description"
+            v-model="form.note"
             type="text" 
             placeholder="想记点什么？"
             class="w-full px-4 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-base"

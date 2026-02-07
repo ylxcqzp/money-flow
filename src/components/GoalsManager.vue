@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import BaseDatePicker from './BaseDatePicker.vue'
 
 const store = useTransactionStore()
 const showAddForm = ref(false)
@@ -209,10 +210,9 @@ const resetForm = () => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 px-1">截止日期 (可选)</label>
-          <input 
+          <BaseDatePicker 
             v-model="newGoal.deadline"
-            type="date" 
-            class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all text-sm font-medium"
+            placeholder="选择截止日期"
           />
         </div>
         <div>

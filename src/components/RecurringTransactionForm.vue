@@ -5,7 +5,9 @@
  */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
-import { X, Calendar, Repeat, Tag, DollarSign, Info, Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, HelpCircle } from 'lucide-vue-next'
+import { X, Calendar, Repeat, Tag, DollarSign, Info, Wallet } from 'lucide-vue-next'
+import BaseSelect from './BaseSelect.vue'
+import BaseDatePicker from './BaseDatePicker.vue'
 
 // --- Props 与 Emits ---
 
@@ -28,7 +30,7 @@ const initializeForm = () => {
       type: props.initialData.type || 'expense',
       categoryId: parent ? parent.id : (props.initialData.categoryId || ''),
       subCategoryId: parent ? props.initialData.categoryId : '',
-      startDate: props.initialData.startDate ? props.initialData.startDate.split('T')[0] : new Date().toISOString().split('T')[0],
+      startDate: (props.initialData.startDate && !isNaN(new Date(props.initialData.startDate).getTime())) ? new Date(props.initialData.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       accountId: props.initialData.accountId || store.accounts[0]?.id || '1'
     }
   }
@@ -69,11 +71,11 @@ const flatCategories = computed(() => {
     .filter(c => c.type === formData.value.type)
     .forEach(cat => {
       // 添加父分类
-      result.push({ id: cat.id, name: cat.name, isParent: true })
+      result.push({ value: cat.id, label: cat.name, isParent: true })
       // 如果有子分类，添加带缩进的子分类
       if (cat.children) {
         cat.children.forEach(sub => {
-          result.push({ id: sub.id, name: `  └─ ${sub.name}`, parentId: cat.id })
+          result.push({ value: sub.id, label: `  └─ ${sub.name}`, parentId: cat.id })
         })
       }
     })
@@ -89,16 +91,16 @@ const handleCategoryChange = (selectedId) => {
   if (!selectedId) return
   
   const targetId = String(selectedId)
-  const found = flatCategories.value.find(c => String(c.id) === targetId)
+  const found = flatCategories.value.find(c => String(c.value) === targetId)
   
   if (found) {
     if (found.parentId) {
       // 选中了子分类
       formData.value.categoryId = found.parentId
-      formData.value.subCategoryId = found.id
+      formData.value.subCategoryId = found.value
     } else {
       // 选中了父分类
-      formData.value.categoryId = found.id
+      formData.value.categoryId = found.value
       formData.value.subCategoryId = ''
     }
     formError.value = '' // 清除错误信息
@@ -260,22 +262,13 @@ const handleSubmit = async () => {
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">分类</label>
                   <div class="relative">
-                    <Tag class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
-                    <select
-                      :value="formData.subCategoryId || formData.categoryId"
-                      @change="handleCategoryChange($event.target.value)"
-                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
-                      :class="formError && !formData.categoryId ? 'border-rose-500 bg-rose-50' : 'border-slate-200'"
-                    >
-                      <option value="" disabled>选择分类</option>
-                      <option
-                        v-for="item in flatCategories"
-                        :key="item.id"
-                        :value="item.id"
-                      >
-                        {{ item.name }}
-                      </option>
-                    </select>
+                    <BaseSelect
+                      :model-value="formData.subCategoryId || formData.categoryId"
+                      @update:model-value="handleCategoryChange"
+                      :options="flatCategories"
+                      placeholder="选择分类"
+                      :icon="Tag"
+                    />
                   </div>
                 </div>
               </div>
@@ -291,31 +284,20 @@ const handleSubmit = async () => {
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">重复频率</label>
                   <div class="relative">
-                    <Repeat class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
-                    <select
+                    <BaseSelect
                       v-model="formData.frequency"
-                      class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
-                    >
-                      <option
-                        v-for="item in frequencies"
-                        :key="item.value"
-                        :value="item.value"
-                      >
-                        {{ item.label }}
-                      </option>
-                    </select>
+                      :options="frequencies"
+                      :icon="Repeat"
+                    />
                   </div>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">开始日期</label>
                   <div class="relative">
-                    <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" :size="18" />
-                    <input 
+                    <BaseDatePicker
                       v-model="formData.startDate"
-                      type="date" 
-                      required
-                      class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all outline-none"
-                    >
+                      placeholder="选择开始日期"
+                    />
                   </div>
                 </div>
               </div>
@@ -324,19 +306,12 @@ const handleSubmit = async () => {
               <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">结算账户</label>
                 <div class="relative">
-                  <Info class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none" :size="18" />
-                  <select
+                  <BaseSelect
                     v-model="formData.accountId"
-                    class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none appearance-none"
-                  >
-                    <option
-                      v-for="item in store.accounts"
-                      :key="item.id"
-                      :value="item.id"
-                    >
-                      {{ item.name }}
-                    </option>
-                  </select>
+                    :options="store.accounts.map(a => ({ label: a.name, value: a.id }))"
+                    :icon="Wallet"
+                    placeholder="选择账户"
+                  />
                 </div>
               </div>
             </div>

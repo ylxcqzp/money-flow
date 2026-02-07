@@ -188,8 +188,8 @@ export const useTransactionStore = defineStore('transaction', () => {
       } else if (key === 'amount') {
         comparison = Number(a.amount) - Number(b.amount)
       } else if (key === 'category') {
-        const catA = findCategoryById(a.subCategoryId || a.categoryId)?.name || ''
-        const catB = findCategoryById(b.subCategoryId || b.categoryId)?.name || ''
+        const catA = findCategoryById(a.categoryId)?.name || ''
+        const catB = findCategoryById(b.categoryId)?.name || ''
         comparison = catA.localeCompare(catB, 'zh-CN')
       }
 

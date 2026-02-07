@@ -24,6 +24,7 @@ import {
   ArrowRight
 } from 'lucide-vue-next';
 import { format, subMonths, startOfMonth, endOfMonth, isSameMonth, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { BaseDatePicker } from '../components/BaseDatePicker.vue';
 import { zhCN } from 'date-fns/locale';
 
 // ECharts 核心模块导入
@@ -404,11 +405,11 @@ const exportToExcel = () => {
     const excelData = filteredData.value.map(t => {
       const { category, parent } = store.findCategoryWithParent(t.categoryId);
       return {
-        '日期': format(parseISO(t.date), 'yyyy-MM-dd HH:mm'),
+        '日期': t.date ? format(parseISO(t.date), 'yyyy-MM-dd HH:mm') : '-',
         '类型': t.type === 'income' ? '收入' : (t.type === 'expense' ? '支出' : '转账'),
         '分类': parent ? parent.name : (category?.name || (t.type === 'transfer' ? '转账' : '未知')),
         '子分类': parent ? category?.name : '-',
-        '说明': t.description || '-',
+        '说明': t.note || '-',
         '账户': store.accounts.find(a => a.id === (t.accountId || '1'))?.name || '默认账户',
         '金额': Number(t.amount).toFixed(2),
         '标签': t.tags ? t.tags.join(', ') : '-'
@@ -503,16 +504,14 @@ const exportToExcel = () => {
               <CalendarIcon :size="16" /> 时间范围
             </label>
             <div class="flex items-center gap-2">
-              <input 
-                type="date" 
+              <BaseDatePicker 
                 v-model="filterStartDate"
-                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                class="flex-1"
               />
               <ArrowRight :size="16" class="text-slate-400" />
-              <input 
-                type="date" 
+              <BaseDatePicker 
                 v-model="filterEndDate"
-                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                class="flex-1"
               />
             </div>
           </div>
@@ -710,7 +709,7 @@ const exportToExcel = () => {
                     <td class="py-4 px-4 font-medium text-slate-700">
                       {{ getFullCategoryName(t.categoryId) }}
                     </td>
-                    <td class="py-4 px-4 text-slate-600">{{ t.description || '-' }}</td>
+                    <td class="py-4 px-4 text-slate-600">{{ t.note || '-' }}</td>
                     <td class="py-4 px-4">
                       <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
                         {{ store.accounts.find(a => a.id === (t.accountId || '1'))?.name }}

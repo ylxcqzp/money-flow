@@ -18,7 +18,7 @@ import GoalsManager from '../components/GoalsManager.vue'
 import { Wallet, TrendingUp, TrendingDown, Plus, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Settings, AlertCircle, Repeat, Trash2, CreditCard, Smartphone, MessageCircle, LayoutGrid, Tag as TagIcon, Hash, Check, BarChart3, PieChart, Target, Scale, BellRing, RefreshCw, LogOut } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { format, addYears, addMonths, addDays, subYears, subMonths, subDays } from 'date-fns'
 import { Loader2 } from 'lucide-vue-next'
 import { ElMessageBox } from 'element-plus'
@@ -38,6 +38,20 @@ const showGoalsManager = ref(false)      // 储蓄目标弹窗
 const showUserMenu = ref(false)          // 用户菜单显示状态
 const editingTransaction = ref(null)     // 当前正在编辑的交易对象
 const deletingRecurringId = ref(null)    // 正在删除的周期账单ID
+
+// 监听所有弹窗状态，控制 body 滚动锁定
+const isAnyModalOpen = computed(() => 
+  showForm.value || 
+  showBudgetSetter.value || 
+  showRecurringForm.value || 
+  showCategoryManager.value || 
+  showAccountManager.value || 
+  showGoalsManager.value
+)
+
+watch(isAnyModalOpen, (isOpen) => {
+  document.body.style.overflow = isOpen ? 'hidden' : ''
+})
 
 /**
  * 退出登录
@@ -603,7 +617,7 @@ const handleDeleteRecurring = async (id) => {
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400">
                   <span class="bg-slate-100 px-1.5 py-0.5 rounded uppercase">{{ rt.frequency }}</span>
-                  <span>下次执行: {{ format(new Date(rt.nextDate), 'MM-dd') }}</span>
+                  <span>下次执行: {{ rt.nextExecutionDate && !isNaN(new Date(rt.nextExecutionDate).getTime()) ? format(new Date(rt.nextExecutionDate), 'yyyy-MM-dd') : '待定' }}</span>
                 </div>
               </div>
             </div>
@@ -721,8 +735,8 @@ const handleDeleteRecurring = async (id) => {
             </div>
             
             <!-- Modal Content (Scrollable) -->
-            <div class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-              <CategoryManager />
+            <div class="flex-1 overflow-hidden flex flex-col">
+              <CategoryManager class="h-full" />
             </div>
           </div>
         </div>
