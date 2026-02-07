@@ -240,12 +240,12 @@ const handleDelete = async (id) => {
 </script>
 
 <template>
-  <div class="h-[65vh] flex flex-col relative overflow-hidden">
+  <div class="h-full flex flex-col relative overflow-hidden min-h-0">
     <!-- 视图切换动画 -->
     <Transition name="fade-slide" mode="out-in">
       
       <!-- 列表视图 -->
-      <div v-if="viewMode === 'list'" class="flex flex-col h-full" key="list">
+      <div v-if="viewMode === 'list'" class="flex flex-col h-full min-h-0" key="list">
         <!-- 顶部固定区域：切换标签与添加按钮 -->
         <div class="flex-none px-8 pt-6 space-y-4">
           <!-- 顶部类型切换标签 -->

@@ -3,7 +3,7 @@
  * 预算设置组件 BudgetSetter.vue
  * 提供一个界面，允许用户为当前选中的月份设置总支出预算以及各分类的月度限额
  */
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
 import { 
   Check, Loader2, AlertCircle, HelpCircle, Plus, Edit2, Trash2, X, Search,
@@ -39,13 +39,21 @@ const getIcon = (name) => iconComponents[name] || HelpCircle
 // --- 响应式数据 ---
 
 // 获取当前月份的原始预算数据
-const rawBudgetData = store.budgets[store.currentMonthKey] || {}
-const isOldFormat = typeof rawBudgetData === 'number'
+// 使用 watch 监听 store 数据变化，确保异步加载的数据能正确反映到表单中
+const totalBudget = ref('')
+const categoryBudgets = ref({})
 
-// 预算金额输入值
-const totalBudget = ref(isOldFormat ? rawBudgetData : (rawBudgetData.total || store.currentMonthBudget || ''))
-// 分类预算输入值 { catId: amount }
-const categoryBudgets = ref(isOldFormat ? {} : { ...(rawBudgetData.categories || {}) })
+watch(() => store.currentBudget, (newVal) => {
+  const rawBudgetData = newVal || {}
+  const isOldFormat = typeof rawBudgetData === 'number'
+  
+  // 如果当前已经在编辑中（有值），可能不希望被覆盖？
+  // 但这是设置页面，通常期望显示最新数据。
+  // 为了简单起见，每次 store 更新都同步，除非用户正在输入（这比较复杂，这里假设打开时数据已就绪或加载后更新）
+  
+  totalBudget.value = isOldFormat ? rawBudgetData : (rawBudgetData.total || '')
+  categoryBudgets.value = isOldFormat ? {} : { ...(rawBudgetData.categories || {}) }
+}, { immediate: true, deep: true })
 
 // 模态框状态
 const showPicker = ref(false) // 是否显示分类选择器

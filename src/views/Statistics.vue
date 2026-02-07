@@ -24,7 +24,7 @@ import {
   ArrowRight
 } from 'lucide-vue-next';
 import { format, subMonths, startOfMonth, endOfMonth, isSameMonth, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { BaseDatePicker } from '../components/BaseDatePicker.vue';
+import BaseDatePicker from '../components/BaseDatePicker.vue';
 import { zhCN } from 'date-fns/locale';
 
 // ECharts 核心模块导入
