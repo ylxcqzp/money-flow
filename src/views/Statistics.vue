@@ -497,21 +497,22 @@ const exportToExcel = () => {
       <!-- 筛选面板 -->
       <Transition name="slide-down">
         <div v-if="showFilterPanel" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div class="space-y-8">
           <!-- 时间范围 -->
-          <div>
+          <div class="max-w-2xl">
             <label class="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <CalendarIcon :size="16" /> 时间范围
             </label>
-            <div class="flex items-center gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2">
               <BaseDatePicker 
                 v-model="filterStartDate"
-                class="flex-1"
+                class="w-full"
               />
-              <ArrowRight :size="16" class="text-slate-400" />
+              <ArrowRight :size="16" class="text-slate-400 hidden sm:block" />
+              <span class="text-slate-400 text-center sm:hidden">至</span>
               <BaseDatePicker 
                 v-model="filterEndDate"
-                class="flex-1"
+                class="w-full"
               />
             </div>
           </div>

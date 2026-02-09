@@ -453,208 +453,187 @@ const handleDeleteRecurring = async (id) => {
 
         <!-- Right Panel (e.g., Quick Actions or Summary) -->
         <div class="space-y-6">
-          <!-- Exchange Rate Info Card -->
-          <div class="bg-gradient-to-br from-primary-600 to-primary-500 p-4 rounded-2xl text-white shadow-lg shadow-primary-200 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <RefreshCw :size="48" />
-            </div>
-            <div class="relative z-10 flex items-center justify-between">
-              <div>
-                <p class="text-[10px] text-primary-100 font-bold uppercase tracking-wider mb-1">多币种支持已开启</p>
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-bold">汇率已更新</span>
-                  <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{{ lastExchangeRateUpdateLabel }}</span>
-                </div>
-              </div>
-              <button 
-                @click="store.fetchExchangeRates" 
-                class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title="手动刷新汇率"
-                :disabled="store.isFetchingRates"
-              >
-                <RefreshCw :size="14" :class="{ 'animate-spin': store.isFetchingRates }" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Accounts Card -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          
+          <!-- 1. Assets Card -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Wallet :size="20" class="text-primary-500" />
                 我的账户
               </h2>
-              <button 
-                @click="showAccountManager = true"
-                class="text-xs font-medium text-primary-600 hover:text-primary-700 bg-primary-50 px-2.5 py-1.5 rounded-lg transition-all"
-              >
-                管理账户
-              </button>
+              <div class="flex items-center gap-2">
+                <button 
+                  @click="store.fetchExchangeRates" 
+                  class="flex items-center gap-1.5 px-2 py-1 bg-slate-50 hover:bg-primary-50 rounded-lg text-[10px] text-slate-400 hover:text-primary-600 transition-all" 
+                  :title="'汇率更新于: ' + lastExchangeRateUpdateLabel"
+                  :disabled="store.isFetchingRates"
+                >
+                  <RefreshCw :size="10" :class="{ 'animate-spin': store.isFetchingRates }" />
+                  <span>汇率</span>
+                </button>
+                <button 
+                  @click="showAccountManager = true"
+                  class="text-xs font-bold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  管理
+                </button>
+              </div>
             </div>
             
-            <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
               <div 
                 v-for="acc in store.accounts" 
                 :key="acc.id"
-                class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary-100 transition-all"
+                class="flex flex-col p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary-200 hover:bg-white hover:shadow-sm transition-all group"
               >
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary-600 shadow-sm">
-                    <component :is="getAccountIcon(acc.icon)" :size="20" />
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-primary-600 shadow-sm group-hover:scale-110 transition-transform">
+                    <component :is="getAccountIcon(acc.icon)" :size="16" />
                   </div>
-                  <div>
-                    <p class="text-sm font-medium text-slate-700">{{ acc.name }}</p>
-                    <p class="text-[10px] text-slate-400">{{ acc.type === 'cash' ? '现金账户' : '电子钱包' }}</p>
-                  </div>
+                  <span class="text-xs text-slate-400 truncate">{{ acc.type === 'cash' ? '现金' : '账户' }}</span>
                 </div>
-                <div class="text-right">
-                  <p class="text-sm font-bold text-slate-900">¥{{ store.accountBalances[acc.id]?.toFixed(2) || '0.00' }}</p>
+                <div>
+                  <p class="text-xs font-medium text-slate-700 truncate mb-0.5">{{ acc.name }}</p>
+                  <p class="text-sm font-bold text-slate-900 truncate">¥{{ store.accountBalances[acc.id]?.toFixed(2) || '0.00' }}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Budget Card -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-slate-800">月度预算</h2>
-              <button @click="showBudgetSetter = true" class="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-primary-600 transition-colors">
-                <Settings :size="18" />
-              </button>
-            </div>
-            
-            <div class="space-y-4">
-              <div class="flex items-end justify-between">
-                <div>
-                  <p class="text-xs text-slate-500 mb-1">{{ format(store.filterDate, 'MM月') }}已支出</p>
-                  <p class="text-2xl font-bold text-slate-900">¥{{ store.currentMonthExpense.toFixed(2) }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-xs text-slate-500 mb-1">预算 ¥{{ store.currentMonthBudget.toFixed(2) }}</p>
-                  <p class="text-sm font-medium" :class="store.isOverBudget ? 'text-rose-500' : 'text-slate-600'">
-                    {{ store.currentMonthBudget > 0 ? (store.isOverBudget ? '已超支' : '剩余 ¥' + (store.currentMonthBudget - store.currentMonthExpense).toFixed(2)) : '未设置预算' }}
-                  </p>
-                </div>
-              </div>
-
-              <!-- Progress Bar -->
-              <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  class="h-full transition-all duration-500"
-                  :class="store.isOverBudget ? 'bg-rose-500' : (store.budgetProgress > 80 ? 'bg-amber-500' : 'bg-primary-500')"
-                  :style="{ width: `${Math.min(store.budgetProgress, 100)}%` }"
-                ></div>
+          <!-- 2. Budget & Analysis Card -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
+            <!-- Budget Section -->
+            <div class="mb-8">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <PieChart :size="20" class="text-primary-500" />
+                  月度预算
+                </h2>
+                <button @click="showBudgetSetter = true" class="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-primary-600 transition-colors">
+                  <Settings :size="16" />
+                </button>
               </div>
               
-              <!-- Warning Message -->
-              <div v-if="store.isOverBudget" class="flex items-start gap-2 p-3 bg-rose-50 rounded-xl text-rose-600 text-xs">
-                <AlertCircle :size="16" class="shrink-0" />
-                <p>警报：您本月的支出已超出预算，建议适当控制非必要消费。</p>
+              <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <div class="flex items-end justify-between mb-3">
+                  <div>
+                    <p class="text-xs text-slate-500 mb-1">本月支出</p>
+                    <p class="text-xl font-bold text-slate-900">¥{{ store.currentMonthExpense.toFixed(2) }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs text-slate-500 mb-1">剩余额度</p>
+                    <p class="text-sm font-bold" :class="store.isOverBudget ? 'text-rose-500' : 'text-emerald-500'">
+                      {{ store.currentMonthBudget > 0 ? (store.isOverBudget ? '已超支' : '¥' + (store.currentMonthBudget - store.currentMonthExpense).toFixed(2)) : '--' }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="h-2.5 bg-slate-200 rounded-full overflow-hidden mb-2">
+                  <div 
+                    class="h-full transition-all duration-1000 ease-out rounded-full"
+                    :class="store.isOverBudget ? 'bg-rose-500' : (store.budgetProgress > 80 ? 'bg-amber-500' : 'bg-primary-500')"
+                    :style="{ width: `${Math.min(store.budgetProgress, 100)}%` }"
+                  ></div>
+                </div>
+                
+                <p v-if="store.isOverBudget" class="text-[10px] text-rose-500 font-medium flex items-center gap-1">
+                  <AlertCircle :size="10" />
+                  超出预算，请注意控制支出
+                </p>
               </div>
-              <div v-else-if="store.budgetProgress > 80" class="flex items-start gap-2 p-3 bg-amber-50 rounded-xl text-amber-600 text-xs">
-                <AlertCircle :size="16" class="shrink-0" />
-                <p>提示：本月预算已使用超过80%，请注意后续支出。</p>
+            </div>
+
+            <!-- Category Chart Section -->
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold text-slate-700">消费构成</h3>
+                <button 
+                  @click="showCategoryManager = true"
+                  class="text-[10px] font-bold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-lg transition-all"
+                >
+                  管理分类
+                </button>
               </div>
+              <CategoryChart />
             </div>
           </div>
 
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <LayoutGrid :size="20" class="text-primary-500" />
-                分类管理
-              </h2>
-              <button 
-                @click="showCategoryManager = true"
-                class="text-xs font-medium text-primary-600 hover:text-primary-700 bg-primary-50 px-2.5 py-1.5 rounded-lg transition-all"
-              >
-                编辑分类
-              </button>
-            </div>
-            <CategoryChart />
-          </div>
-
-          <!-- Recurring Transactions Panel -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <Repeat :size="20" class="text-primary-500" />
-                周期账单
-              </h2>
-              <button 
-                @click="showRecurringForm = true"
-                class="p-2 hover:bg-slate-50 rounded-lg text-primary-600 transition-colors"
-                title="添加周期账单"
-              >
-                <Plus :size="18" />
-              </button>
-            </div>
-            
-            <div class="space-y-3">
-              <div v-if="store.recurringTransactions.length === 0" class="text-center py-6">
-                <p class="text-slate-400 text-sm">暂无周期账单</p>
+          <!-- 3. Planning Card (Recurring & Goals) -->
+          <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
+            <!-- Recurring Section -->
+            <div class="mb-8">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Repeat :size="20" class="text-primary-500" />
+                  周期账单
+                </h2>
+                <button 
+                  @click="showRecurringForm = true"
+                  class="p-2 hover:bg-slate-50 rounded-xl text-primary-600 transition-colors"
+                >
+                  <Plus :size="16" />
+                </button>
               </div>
-              <div 
-                v-for="rt in store.recurringTransactions" 
-                :key="rt.id"
-                class="group p-3 rounded-xl border border-slate-100 hover:border-primary-100 hover:bg-primary-50/30 transition-all"
-              >
-                <div class="flex items-center justify-between mb-1">
-                  <span class="font-medium text-slate-700">{{ rt.description }}</span>
-                  <div class="flex items-center gap-2">
-                    <span :class="rt.type === 'expense' ? 'text-rose-500' : 'text-emerald-500'" class="font-bold">
+              
+              <div class="space-y-3">
+                <div v-if="store.recurringTransactions.length === 0" class="text-center py-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <p class="text-slate-400 text-xs">暂无周期账单</p>
+                </div>
+                <div 
+                  v-for="rt in store.recurringTransactions" 
+                  :key="rt.id"
+                  class="group relative flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 hover:border-primary-200 hover:shadow-md transition-all"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-primary-50 flex items-center justify-center text-primary-600 font-bold text-xs">
+                      {{ rt.frequency === 'monthly' ? '月' : (rt.frequency === 'weekly' ? '周' : '年') }}
+                    </div>
+                    <div>
+                      <p class="text-sm font-bold text-slate-800">{{ rt.description }}</p>
+                      <p class="text-[10px] text-slate-400">下次: {{ rt.nextExecutionDate && !isNaN(new Date(rt.nextExecutionDate).getTime()) ? format(new Date(rt.nextExecutionDate), 'MM-dd') : '待定' }}</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-bold" :class="rt.type === 'expense' ? 'text-rose-500' : 'text-emerald-500'">
                       {{ rt.type === 'expense' ? '-' : '+' }}¥{{ rt.amount }}
-                    </span>
+                    </p>
                     <button 
                       @click="handleDeleteRecurring(rt.id)"
-                      :disabled="deletingRecurringId === rt.id"
-                      class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-all disabled:opacity-100 disabled:cursor-not-allowed"
+                      class="absolute -top-2 -right-2 p-1.5 bg-white shadow-sm border border-slate-100 rounded-full text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
                     >
-                      <Loader2 v-if="deletingRecurringId === rt.id" class="animate-spin" :size="14" />
-                      <Trash2 v-else :size="14" />
+                      <Trash2 :size="12" />
                     </button>
                   </div>
                 </div>
-                <div class="flex items-center justify-between text-[10px] text-slate-400">
-                  <span class="bg-slate-100 px-1.5 py-0.5 rounded uppercase">{{ rt.frequency }}</span>
-                  <span>下次执行: {{ rt.nextExecutionDate && !isNaN(new Date(rt.nextExecutionDate).getTime()) ? format(new Date(rt.nextExecutionDate), 'yyyy-MM-dd') : '待定' }}</span>
-                </div>
               </div>
             </div>
-          </div>
-          
-          <div class="bg-gradient-to-br from-primary-600 to-primary-700 p-6 rounded-2xl text-white shadow-lg shadow-primary-200">
-            <h3 class="font-bold text-lg mb-2">坚持记账，</h3>
-            <p class="text-primary-100 text-sm leading-relaxed">
-              清晰的收支记录是理财的第一步。继续保持这个好习惯！
-            </p>
-          </div>
 
-          <!-- 储蓄目标面板 -->
-          <div v-if="store.goals.length > 0" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <Target :size="20" class="text-primary-500" />
-                储蓄目标
-              </h2>
-              <button 
-                @click="showGoalsManager = true"
-                class="p-2 hover:bg-slate-50 rounded-lg text-primary-600 transition-colors"
-              >
-                <ChevronRight :size="18" />
-              </button>
-            </div>
-            <div class="space-y-4">
-              <div v-for="goal in store.goals.slice(0, 2)" :key="goal.id" class="space-y-2">
-                <div class="flex items-center justify-between text-xs font-bold">
-                  <span class="text-slate-600">{{ goal.name }}</span>
-                  <span class="text-primary-600">{{ Math.round((goal.currentAmount / goal.targetAmount) * 100) }}%</span>
-                </div>
-                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full bg-primary-500 transition-all duration-1000"
-                    :style="{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }"
-                  ></div>
+            <!-- Goals Section -->
+            <div v-if="store.goals.length > 0">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Target :size="20" class="text-primary-500" />
+                  储蓄目标
+                </h2>
+                <button 
+                  @click="showGoalsManager = true"
+                  class="p-2 hover:bg-slate-50 rounded-xl text-primary-600 transition-colors"
+                >
+                  <ChevronRight :size="16" />
+                </button>
+              </div>
+              <div class="space-y-3">
+                <div v-for="goal in store.goals.slice(0, 2)" :key="goal.id" class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div class="flex items-center justify-between text-xs font-bold mb-2">
+                    <span class="text-slate-700">{{ goal.name }}</span>
+                    <span class="text-primary-600">{{ Math.round((goal.currentAmount / goal.targetAmount) * 100) }}%</span>
+                  </div>
+                  <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div 
+                      class="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-1000"
+                      :style="{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }"
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>

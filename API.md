@@ -25,11 +25,83 @@
 }
 ```
 
+### 业务错误码说明
+
+| 错误码 | 含义 | 说明 |
+| :--- | :--- | :--- |
+| 0 | 成功 | 请求处理成功 |
+| 400 | 参数错误 | 请求参数不合法，如邮箱格式错误、验证码长度不符等 |
+| 401 | 未认证 | 令牌无效、已过期或验证码错误、刷新令牌已失效 |
+| 403 | 无权限 | 尝试访问不属于自己的资源 |
+| 409 | 业务冲突 | 资源已存在，如邮箱已被注册 |
+| 429 | 请求过多 | 触发频率限制，如发送验证码过于频繁 |
+| 500 | 系统错误 | 后端内部处理异常或三方服务（邮件/Redis）不可用 |
+
+---
+
+## 0. 部署与环境配置 (Deployment)
+
+### 依赖环境
+- **Java**: JDK 17+
+- **Database**: MySQL 8.0+
+- **Cache**: Redis 6.0+
+- **Mail**: 支持 SMTP 协议的邮箱服务（如 QQ邮箱、Gmail、阿里云邮件推送等）
+
+### 关键配置项 (application.yml)
+
+#### Redis 配置 (最新配置方式)
+```yaml
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+```
+- 用于存储：邮箱验证码（防刷）、Refresh Token、登录限流信息。
+
+#### 邮件服务配置 (SMTP)
+```yaml
+spring:
+  mail:
+    host: ${MAIL_HOST:smtp.example.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:} # 授权码而非登录密码
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+```
+- **注意**: 发送验证码前必须确保 SMTP 服务已开启，且配置了正确的 `MAIL_FROM` 地址。
+
 ---
 
 ## 1. 认证 (Auth)
 
-### 1.1 用户登录
+### 1.1 发送邮箱验证码
+- **URL**: `/api/auth/send-code`
+- **Method**: `POST`
+- **描述**: 发送注册验证码
+- **Request Body 参数**:
+  - `email` (string, 必填): 用户邮箱
+- **Request Body 示例**:
+  ```json
+  {
+    "email": "user@example.com"
+  }
+  ```
+- **Response data 字段**: 无
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": null
+  }
+  ```
+
+### 1.2 用户登录
 - **URL**: `/api/auth/login`
 - **Method**: `POST`
 - **描述**: 邮箱密码登录
@@ -44,7 +116,9 @@
   }
   ```
 - **Response data 字段**:
-  - `token` (string): JWT Token
+  - `token` (string): JWT Token（兼容字段）
+  - `accessToken` (string): 访问令牌
+  - `refreshToken` (string): 刷新令牌
   - `user` (object): 用户信息
   - `user.id` (number): 用户ID
   - `user.username` (string): 用户名
@@ -58,6 +132,8 @@
     "message": "success",
     "data": {
       "token": "jwt-token-string",
+      "accessToken": "jwt-token-string",
+      "refreshToken": "refresh-token-string",
       "user": {
         "id": 1,
         "username": "User",
@@ -69,20 +145,22 @@
   }
   ```
 
-### 1.2 用户注册
+### 1.3 用户注册
 - **URL**: `/api/auth/register`
 - **Method**: `POST`
-- **描述**: 注册新用户
+- **描述**: 邮箱验证码注册
 - **Request Body 参数**:
   - `username` (string, 必填): 用户名，长度 2-30
   - `email` (string, 必填): 邮箱
   - `password` (string, 必填): 登录密码，长度 8-64
+  - `code` (string, 必填): 邮箱验证码，长度 4-6
 - **Request Body 示例**:
   ```json
   {
     "username": "Nickname",
     "email": "user@example.com",
-    "password": "password123"
+    "password": "password123",
+    "code": "123456"
   }
   ```
 - **Response data 字段**: 同登录接口
@@ -93,6 +171,8 @@
     "message": "success",
     "data": {
       "token": "jwt-token-string",
+      "accessToken": "jwt-token-string",
+      "refreshToken": "refresh-token-string",
       "user": {
         "id": 2,
         "username": "Nickname",
@@ -104,7 +184,40 @@
   }
   ```
 
-### 1.3 获取当前用户信息
+### 1.4 刷新令牌
+- **URL**: `/api/auth/refresh`
+- **Method**: `POST`
+- **描述**: 刷新访问令牌
+- **Request Body 参数**:
+  - `refreshToken` (string, 必填): 刷新令牌
+- **Request Body 示例**:
+  ```json
+  {
+    "refreshToken": "refresh-token-string"
+  }
+  ```
+- **Response data 字段**: 同登录接口
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "token": "jwt-token-string",
+      "accessToken": "jwt-token-string",
+      "refreshToken": "refresh-token-string",
+      "user": {
+        "id": 1,
+        "username": "User",
+        "nickname": "User",
+        "email": "user@example.com",
+        "avatarUrl": "https://example.com/avatar.png"
+      }
+    }
+  }
+  ```
+
+### 1.5 获取当前用户信息
 - **URL**: `/api/auth/me`
 - **Method**: `GET`
 - **描述**: 获取当前登录用户信息
@@ -133,7 +246,7 @@
   }
   ```
 
-### 1.4 退出登录
+### 1.6 退出登录
 - **URL**: `/api/auth/logout`
 - **Method**: `POST`
 - **描述**: 退出登录

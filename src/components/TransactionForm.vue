@@ -71,6 +71,12 @@ const initializeForm = () => {
   }
 }
 
+const accountOptions = computed(() => store.accounts.map(acc => ({
+  value: acc.id,
+  label: acc.name,
+  ...acc
+})))
+
 const form = ref(initializeForm())
 
 onMounted(async () => {
@@ -329,7 +335,7 @@ const handleSubmit = async () => {
           <label class="block text-sm font-bold text-slate-700">账户</label>
           <BaseSelect
             v-model="form.accountId"
-            :options="store.accounts"
+            :options="accountOptions"
             placeholder="选择账户"
             :icon="Wallet"
           />
@@ -341,7 +347,7 @@ const handleSubmit = async () => {
             <label class="block text-sm font-bold text-slate-700">转出</label>
             <BaseSelect
               v-model="form.fromAccountId"
-              :options="store.accounts"
+              :options="accountOptions"
               placeholder="转出账户"
               :icon="Wallet"
             />
@@ -350,7 +356,7 @@ const handleSubmit = async () => {
             <label class="block text-sm font-bold text-slate-700">转入</label>
             <BaseSelect
               v-model="form.toAccountId"
-              :options="store.accounts"
+              :options="accountOptions"
               placeholder="转入账户"
               :icon="Wallet"
             />

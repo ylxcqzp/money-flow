@@ -136,8 +136,8 @@ const getIcon = (name) => {
       }"
     >
       <!-- List View (Front Face) -->
-      <div class="backface-hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="backface-hidden bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-full hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
+        <div class="p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-6">
             <div class="flex items-center gap-3">
               <button 
