@@ -1,13 +1,41 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import authApi from '@/api/auth'
 import { useNotificationStore } from './notification'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('money-flow-token') || '')
+  const accessToken = ref(localStorage.getItem('money-flow-access-token') || '')
+  const refreshToken = ref(localStorage.getItem('money-flow-refresh-token') || '')
   const userStr = localStorage.getItem('money-flow-user')
   const user = ref(userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null)
   const notificationStore = useNotificationStore()
+
+  /**
+   * 身份认证状态
+   */
+  const isAuthenticated = computed(() => !!accessToken.value)
+
+  /**
+   * 统一设置认证数据
+   * @param {Object} data 
+   */
+  const setAuthData = (data) => {
+    accessToken.value = data.accessToken || data.token
+    refreshToken.value = data.refreshToken
+    
+    const u = data.user || {}
+    user.value = {
+      ...u,
+      name: u.nickname || u.username || u.name || '',
+      avatar: u.avatarUrl || u.avatar_url || u.avatar || ''
+    }
+    
+    localStorage.setItem('money-flow-access-token', accessToken.value)
+    if (refreshToken.value) {
+      localStorage.setItem('money-flow-refresh-token', refreshToken.value)
+    }
+    localStorage.setItem('money-flow-user', JSON.stringify(user.value))
+  }
 
   /**
    * 登录方法
@@ -17,55 +45,63 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (email, password) => {
     try {
       const res = await authApi.login({ email, password })
-      // 假设后端返回结构: { token, user }
-      // 如果是 { data: { token, user } } 请根据实际调整
       const data = res.data || res
       
-      token.value = data.token
-      const u = data.user || {}
-      user.value = {
-        ...u,
-        name: u.nickname || u.username || u.name || '',
-        avatar: u.avatar_url || u.avatar || ''
-      }
-      
-      localStorage.setItem('money-flow-token', token.value)
-      localStorage.setItem('money-flow-user', JSON.stringify(user.value))
+      setAuthData(data)
       
       notificationStore.success('登录成功，欢迎回来！')
       return true
     } catch (error) {
-      // notificationStore.error(error.message || '登录失败，请检查邮箱和密码')
+      throw error
+    }
+  }
+
+  /**
+   * 发送验证码
+   * @param {string} email 
+   */
+  const sendCode = async (email) => {
+    try {
+      await authApi.sendVerifyCode({ email })
+      notificationStore.success('验证码已发送至您的邮箱，请查收')
+      return true
+    } catch (error) {
+      // notificationStore.error(error.message || '发送验证码失败')
       throw error
     }
   }
 
   /**
    * 注册方法
+   * @param {string} username
    * @param {string} email 
    * @param {string} password 
-   * @param {string} name 
+   * @param {string} code
    */
-  const register = async (email, password, name) => {
+  const register = async (username, email, password, code) => {
     try {
-      const res = await authApi.register({ email, password, username: name })
-      const data = res.data || res
-      
-      token.value = data.token
-      const u = data.user || {}
-      user.value = {
-        ...u,
-        name: u.nickname || u.username || u.name || '',
-        avatar: u.avatar_url || u.avatar || ''
+      const res = await authApi.register({ username, email, password, code })
+      return res.data || res
+    } catch (error) {
+      throw error
+    }
+  }
+
+  /**
+   * 刷新 Token
+   */
+  const refresh = async () => {
+    try {
+      if (!refreshToken.value) {
+        throw new Error('No refresh token available')
       }
       
-      localStorage.setItem('money-flow-token', token.value)
-      localStorage.setItem('money-flow-user', JSON.stringify(user.value))
+      const res = await authApi.refreshToken({ refreshToken: refreshToken.value })
+      const data = res.data || res
       
-      notificationStore.success('注册成功，欢迎加入 Money Flow！')
+      setAuthData(data)
       return true
     } catch (error) {
-      // notificationStore.error(error.message || '注册失败，请稍后重试')
       throw error
     }
   }
@@ -73,28 +109,28 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 退出登录
    */
-  const logout = async () => {
-    try {
-      // 调用后端退出接口
-      await authApi.logout()
-    } catch (error) {
-      console.error('Logout API failed:', error)
-    } finally {
-      // 无论接口是否成功，都清除本地状态
-      token.value = ''
-      user.value = null
-      localStorage.removeItem('money-flow-token')
-      localStorage.removeItem('money-flow-user')
-      
-      // notificationStore.info('已退出登录')
-    }
+  const logout = () => {
+    accessToken.value = ''
+    refreshToken.value = ''
+    user.value = null
+    
+    localStorage.removeItem('money-flow-access-token')
+    localStorage.removeItem('money-flow-refresh-token')
+    localStorage.removeItem('money-flow-user')
+    
+    notificationStore.success('已安全退出')
   }
 
   return {
-    token,
+    accessToken,
+    refreshToken,
     user,
+    isAuthenticated,
     login,
+    sendCode,
     register,
-    logout
+    refresh,
+    logout,
+    setAuthData
   }
 })

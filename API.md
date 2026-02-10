@@ -7,8 +7,8 @@
 ## 通用说明
 
 ### 鉴权
-所有受保护的接口需要在 Request Header 中携带 JWT Token：
-`Authorization: Bearer <token>`
+所有受保护的接口需要在 Request Header 中携带 Access Token：
+`Authorization: Bearer <accessToken>`
 
 ### 统一响应结构
 后端统一返回结构为：
@@ -116,7 +116,6 @@ spring:
   }
   ```
 - **Response data 字段**:
-  - `token` (string): JWT Token（兼容字段）
   - `accessToken` (string): 访问令牌
   - `refreshToken` (string): 刷新令牌
   - `user` (object): 用户信息
@@ -131,7 +130,6 @@ spring:
     "code": 0,
     "message": "success",
     "data": {
-      "token": "jwt-token-string",
       "accessToken": "jwt-token-string",
       "refreshToken": "refresh-token-string",
       "user": {
@@ -170,7 +168,6 @@ spring:
     "code": 0,
     "message": "success",
     "data": {
-      "token": "jwt-token-string",
       "accessToken": "jwt-token-string",
       "refreshToken": "refresh-token-string",
       "user": {
@@ -203,7 +200,6 @@ spring:
     "code": 0,
     "message": "success",
     "data": {
-      "token": "jwt-token-string",
       "accessToken": "jwt-token-string",
       "refreshToken": "refresh-token-string",
       "user": {

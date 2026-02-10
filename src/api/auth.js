@@ -14,12 +14,36 @@ export default {
   },
 
   /**
+   * 发送验证码
+   * @param {Object} data { email }
+   */
+  sendVerifyCode(data) {
+    return request({
+      url: '/auth/send-code',
+      method: 'post',
+      data
+    })
+  },
+
+  /**
    * 注册
-   * @param {Object} data { username, email, password }
+   * @param {Object} data { username, email, password, code }
    */
   register(data) {
     return request({
       url: '/auth/register',
+      method: 'post',
+      data
+    })
+  },
+
+  /**
+   * 刷新令牌
+   * @param {Object} data { refreshToken }
+   */
+  refreshToken(data) {
+    return request({
+      url: '/auth/refresh',
       method: 'post',
       data
     })

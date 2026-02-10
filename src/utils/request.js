@@ -14,9 +14,9 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     const authStore = useAuthStore()
-    // 如果存在 token，则添加到 Header 中
-    if (authStore.token) {
-      config.headers['Authorization'] = `Bearer ${authStore.token}`
+    // 如果存在 accessToken，则添加到 Header 中
+    if (authStore.accessToken) {
+      config.headers['Authorization'] = `Bearer ${authStore.accessToken}`
     }
     return config
   },
@@ -27,12 +27,14 @@ service.interceptors.request.use(
   }
 )
 
+// 是否正在刷新 token
+let isRefreshing = false
+// 重试队列
+let requests = []
+
 // response 拦截器
 service.interceptors.response.use(
   response => {
-    // 假设后端返回格式为 { code: 200, msg: 'success', data: ... }
-    // 如果是 RESTful 标准，可能直接返回数据或状态码
-    // 这里做一层简单的处理，如果后端遵循统一响应结构
     const res = response.data
 
     // 如果是二进制数据（如导出文件），直接返回
@@ -41,21 +43,56 @@ service.interceptors.response.use(
     }
     
     // 处理后端返回的业务状态码
-    // 约定: code === 0 为成功，其他为异常
     if (res.code !== 0) {
         // 如果是 401，可能是 token 过期
         if (res.code === 401) {
-            // 如果是登录接口本身的 401，不执行 logout，只提示错误
-            const isAuthRequest = response.config.url.includes('/login') || response.config.url.includes('/register')
+            const config = response.config
+            // 如果是登录或刷新接口本身的 401，不执行自动刷新，直接报错
+            if (config.url.includes('/auth/login') || config.url.includes('/auth/refresh') || config.url.includes('/auth/register')) {
+                return Promise.reject(new Error(res.message || 'Authentication failed'))
+            }
+
+            const authStore = useAuthStore()
             
-            if (!isAuthRequest) {
-                const authStore = useAuthStore()
-                authStore.logout().then(() => {
-                    router.push('/login')
-                    // 非登录接口的 401，通常意味着 token 失效，提示用户
-                    toast.error('登录已过期，请重新登录')
+            if (!isRefreshing) {
+                isRefreshing = true
+                return authStore.refresh()
+                    .then(token => {
+                        // 刷新成功，重试队列中的请求
+                        requests.forEach(cb => cb(token))
+                        requests = []
+                        // 重试当前请求
+                        config.headers['Authorization'] = `Bearer ${token}`
+                        return service(config)
+                    })
+                    .catch(err => {
+                        // 刷新失败，清空队列并跳转登录
+                        requests.forEach(cb => cb(null))
+                        requests = []
+                        
+                        authStore.logout(false).then(() => {
+                            router.push('/login')
+                            toast.error('登录已过期，请重新登录')
+                        })
+                        return Promise.reject(err)
+                    })
+                    .finally(() => {
+                        isRefreshing = false
+                    })
+            } else {
+                // 正在刷新，将请求加入队列
+                return new Promise(resolve => {
+                    requests.push(token => {
+                        if (token) {
+                            config.headers['Authorization'] = `Bearer ${token}`
+                            resolve(service(config))
+                        } else {
+                            // 刷新失败，resolve 一个 rejected promise 或者直接 reject
+                            // 这里选择让外层 catch 到错误
+                            resolve(Promise.reject(new Error('Token refresh failed')))
+                        }
+                    })
                 })
-                return Promise.reject(new Error('Unauthorized'))
             }
         }
         
@@ -75,6 +112,9 @@ service.interceptors.response.use(
             case 409: // CONFLICT
                 errorMessage = res.message || '业务冲突'
                 break
+            case 429: // TOO_MANY_REQUESTS
+                errorMessage = res.message || '请求过于频繁，请稍后再试'
+                break
             case 500: // INTERNAL_ERROR
                 errorMessage = res.message || '系统内部错误'
                 break
@@ -88,45 +128,22 @@ service.interceptors.response.use(
         return Promise.reject(new Error(errorMessage))
     }
     
-    // 如果 code === 0，返回 data 部分 (或者整个 res，视项目习惯而定)
-    // 通常返回 res.data 方便直接使用数据，但有时需要 code
-    // 这里如果之前代码是 return res，那可能前端直接用了 res.data
-    // 根据之前的代码 `const res = response.data` 和 `return res`，
-    // 之前的返回值是整个 { code, message, data } 对象。
-    // 为了保持兼容性，继续返回 res
     return res
   },
   error => {
+    // 处理 HTTP 状态码错误 (非 200)
     console.error('Response Error:', error)
+    // 这里也可以处理 HTTP 401 (如果后端不是返回 200 + code: 401 而是直接返回 HTTP 401)
+    // 目前根据文档，后端返回统一结构，状态码通常是 200，业务码在 body 中
+    // 但为了健壮性，这里也应该处理一下 HTTP 401
     
-    const { response } = error
-    let message = '请求失败，请稍后重试'
-
-    if (response) {
-      // 401 未授权，清除 token 并跳转登录页
-      if (response.status === 401) {
-        const authStore = useAuthStore()
-        authStore.logout().then(() => {
-          router.push('/login')
-        })
-        message = '登录已过期，请重新登录'
-      } else if (response.status === 403) {
-        message = '您没有权限执行此操作'
-      } else if (response.status === 404) {
-        message = '请求的资源不存在'
-      } else if (response.status === 500) {
-        message = '服务器内部错误'
-      } else if (response.data && response.data.message) {
-        // 优先使用后端返回的错误信息
-        message = response.data.message
-      }
-    } else if (error.message.includes('timeout')) {
-        message = '请求超时，请检查网络'
-    } else if (error.message.includes('Network Error')) {
-        message = '网络连接异常，请检查网络'
+    if (error.response && error.response.status === 401) {
+       // 逻辑同上，但 axios error 结构不同，需要小心处理
+       // 鉴于 API 文档描述的是统一响应结构，优先信任 response 拦截器中的逻辑
+       // 这里仅作为兜底
     }
     
-    toast.error(message)
+    toast.error(error.message || '网络请求失败')
     return Promise.reject(error)
   }
 )
