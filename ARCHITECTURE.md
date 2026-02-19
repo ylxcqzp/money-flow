@@ -227,10 +227,12 @@ sequenceDiagram
   - POST /api/auth/register（邮箱验证码注册）
   - POST /api/auth/login（邮箱+密码登录）
   - POST /api/auth/refresh（刷新令牌）
-- 账户管理：/api/accounts
-- 交易管理：/api/transactions
-- 分类管理：/api/categories
-- 预算管理：/api/budgets、/api/budget-items
-- 目标管理：/api/goals、/api/goal-records
-- 标签管理：/api/tags、/api/transaction-tags
-- 系统模块：用户、设备、登录日志
+  - GET /api/auth/me（获取当前用户）
+  - POST /api/auth/logout（退出登录）
+- 账户管理：/api/accounts（GET/POST/PUT/DELETE）
+- 交易管理：/api/transactions（GET/GET /page/POST/PUT/DELETE）
+- 分类管理：/api/categories（GET/POST/PUT/DELETE）
+- 预算管理：/api/budgets（GET/POST）
+- 周期账单管理：/api/recurring-rules（GET/POST/PUT/DELETE）
+- 目标管理：/api/goals（GET/POST/PUT/DELETE/POST /{id}/records）
+- 预留控制器：/api/budget-items、/api/goal-records、/api/tags、/api/transaction-tags、/api/sys-users、/api/user-devices、/api/login-logs（当前未暴露业务接口）

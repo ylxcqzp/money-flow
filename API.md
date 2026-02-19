@@ -574,7 +574,57 @@ spring:
   }
   ```
 
-### 4.2 创建交易
+### 4.2 分页获取交易列表
+- **URL**: `/api/transactions/page`
+- **Method**: `GET`
+- **描述**: 分页获取交易列表
+- **Query Params**:
+  - `page` (number, 可选): 页码，从 1 开始，默认 1
+  - `size` (number, 可选): 每页大小，默认 20
+  - `startDate` (string, 可选): 开始日期，格式 yyyy-MM-dd
+  - `endDate` (string, 可选): 结束日期，格式 yyyy-MM-dd
+  - `type` (string, 可选): 交易类型
+  - `categoryId` (number, 可选): 分类ID
+  - `accountId` (number, 可选): 账户ID
+  - `tags` (string, 可选): 标签列表，逗号分隔
+- **前端查询示例**: `/api/transactions/page?page=1&size=20&startDate=2026-02-01&endDate=2026-02-29&type=expense`
+- **Response data 字段**:
+  - `records` (array): 交易列表
+  - `total` (number): 总记录数
+  - `size` (number): 每页大小
+  - `current` (number): 当前页码
+  - `pages` (number): 总页数
+- **Response 示例**:
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "records": [
+        {
+          "id": 1001,
+          "type": "expense",
+          "amount": 50.00,
+          "date": "2026-02-04",
+          "categoryId": 10,
+          "accountId": 1,
+          "targetAccountId": null,
+          "note": "午餐",
+          "tags": [
+            "工作餐",
+            "外卖"
+          ]
+        }
+      ],
+      "total": 120,
+      "size": 20,
+      "current": 1,
+      "pages": 6
+    }
+  }
+  ```
+
+### 4.3 创建交易
 - **URL**: `/api/transactions`
 - **Method**: `POST`
 - **描述**: 创建交易
@@ -629,7 +679,7 @@ spring:
   }
   ```
 
-### 4.3 更新交易
+### 4.4 更新交易
 - **URL**: `/api/transactions/{id}`
 - **Method**: `PUT`
 - **描述**: 更新交易
@@ -674,7 +724,7 @@ spring:
   }
   ```
 
-### 4.4 删除交易
+### 4.5 删除交易
 - **URL**: `/api/transactions/{id}`
 - **Method**: `DELETE`
 - **描述**: 删除交易
@@ -922,7 +972,7 @@ spring:
   - `deadline` (string): 截止日期
   - `icon` (string): 图标
   - `color` (string): 颜色
-  - `status` (string): 状态
+  - `status` (string): 状态（ongoing/completed/archived）
 - **Response 示例**:
   ```json
   {
@@ -937,7 +987,7 @@ spring:
         "deadline": "2026-12-31",
         "icon": "Plane",
         "color": "#FFAA00",
-        "status": "active"
+        "status": "ongoing"
       }
     ]
   }
@@ -994,12 +1044,12 @@ spring:
   - `deadline` (string, 可选): 截止日期，格式 yyyy-MM-dd
   - `icon` (string, 可选): 图标
   - `color` (string, 可选): 颜色
-  - `status` (string, 可选): 状态
+  - `status` (string, 可选): 状态（ongoing/completed/archived）
 - **Request Body 示例**:
   ```json
   {
     "targetAmount": 9000.00,
-    "status": "active"
+    "status": "ongoing"
   }
   ```
 - **Response data 字段**: 同目标列表

@@ -464,12 +464,11 @@ const handleDeleteRecurring = async (id) => {
               <div class="flex items-center gap-2">
                 <button 
                   @click="store.fetchExchangeRates" 
-                  class="flex items-center gap-1.5 px-2 py-1 bg-slate-50 hover:bg-primary-50 rounded-lg text-[10px] text-slate-400 hover:text-primary-600 transition-all" 
+                  class="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-primary-600 transition-colors" 
                   :title="'汇率更新于: ' + lastExchangeRateUpdateLabel"
                   :disabled="store.isFetchingRates"
                 >
-                  <RefreshCw :size="10" :class="{ 'animate-spin': store.isFetchingRates }" />
-                  <span>汇率</span>
+                  <RefreshCw :size="16" :class="{ 'animate-spin': store.isFetchingRates }" />
                 </button>
                 <button 
                   @click="showAccountManager = true"
@@ -480,21 +479,29 @@ const handleDeleteRecurring = async (id) => {
               </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-4">
               <div 
                 v-for="acc in store.accounts" 
                 :key="acc.id"
-                class="flex flex-col p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary-200 hover:bg-white hover:shadow-sm transition-all group"
+                class="relative group rounded-2xl p-4 transition-all duration-300 border border-slate-100 bg-slate-50 hover:-translate-y-1 hover:shadow-md hover:bg-white hover:border-primary-200 cursor-pointer"
+                @click="showAccountManager = true"
               >
-                <div class="flex items-center gap-2 mb-2">
-                  <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-primary-600 shadow-sm group-hover:scale-110 transition-transform">
-                    <component :is="getAccountIcon(acc.icon)" :size="16" />
+                <!-- Top Row -->
+                <div class="flex justify-between items-start mb-3">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors bg-white text-primary-600 shadow-sm group-hover:scale-110 transition-transform">
+                    <component :is="getAccountIcon(acc.icon)" :size="20" />
                   </div>
-                  <span class="text-xs text-slate-400 truncate">{{ acc.type === 'cash' ? '现金' : '账户' }}</span>
+                  <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-white text-slate-500 border border-slate-100">
+                    {{ acc.type === 'cash' ? '现金' : '账户' }}
+                  </span>
                 </div>
+                
+                <!-- Bottom Info -->
                 <div>
-                  <p class="text-xs font-medium text-slate-700 truncate mb-0.5">{{ acc.name }}</p>
-                  <p class="text-sm font-bold text-slate-900 truncate">¥{{ store.accountBalances[acc.id]?.toFixed(2) || '0.00' }}</p>
+                  <p class="text-xs font-medium text-slate-500 mb-0.5 truncate">{{ acc.name }}</p>
+                  <p class="text-lg font-bold tracking-tight truncate text-slate-900">
+                    ¥{{ store.accountBalances[acc.id]?.toFixed(2) || '0.00' }}
+                  </p>
                 </div>
               </div>
             </div>
