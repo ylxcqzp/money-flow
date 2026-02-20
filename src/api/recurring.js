@@ -45,16 +45,5 @@ export default {
       url: `/recurring-rules/${id}`,
       method: 'delete'
     })
-  },
-
-  /**
-   * 生成周期性交易
-   * 触发后端检查所有周期性规则，自动生成符合条件的交易记录
-   */
-  generateTransactions() {
-    return request({
-      url: '/recurring-rules/generate',
-      method: 'post'
-    })
   }
 }

@@ -29,7 +29,7 @@ service.interceptors.request.use(
 
 // 是否正在刷新 token
 let isRefreshing = false
-// 重试队列
+// 重试队列，用于存储在 token 刷新期间挂起的请求
 let requests = []
 
 // response 拦截器
@@ -47,7 +47,7 @@ service.interceptors.response.use(
         // 如果是 401，可能是 token 过期
         if (res.code === 401) {
             const config = response.config
-            // 如果是登录或刷新接口本身的 401，不执行自动刷新，直接报错
+            // 如果是认证相关的接口本身报错，不进行自动刷新，直接抛出错误
             if (config.url.includes('/auth/login') || config.url.includes('/auth/refresh') || config.url.includes('/auth/register')) {
                 return Promise.reject(new Error(res.message || 'Authentication failed'))
             }
@@ -58,7 +58,7 @@ service.interceptors.response.use(
                 isRefreshing = true
                 return authStore.refresh()
                     .then(token => {
-                        // 刷新成功，重试队列中的请求
+                        // 刷新成功，执行队列中的回调，重试挂起的请求
                         requests.forEach(cb => cb(token))
                         requests = []
                         // 重试当前请求
@@ -70,7 +70,8 @@ service.interceptors.response.use(
                         requests.forEach(cb => cb(null))
                         requests = []
                         
-                        authStore.logout(false).then(() => {
+                        // 静默退出，不显示"退出成功"提示，而是显示"登录已过期"错误
+                        authStore.logout(true).then(() => {
                             router.push('/login')
                             toast.error('登录已过期，请重新登录')
                         })
@@ -80,15 +81,14 @@ service.interceptors.response.use(
                         isRefreshing = false
                     })
             } else {
-                // 正在刷新，将请求加入队列
+                // 正在刷新，将当前请求挂起，放入队列中等待刷新完成
                 return new Promise(resolve => {
                     requests.push(token => {
                         if (token) {
                             config.headers['Authorization'] = `Bearer ${token}`
                             resolve(service(config))
                         } else {
-                            // 刷新失败，resolve 一个 rejected promise 或者直接 reject
-                            // 这里选择让外层 catch 到错误
+                            // 刷新失败，Promise 将被 reject
                             resolve(Promise.reject(new Error('Token refresh failed')))
                         }
                     })
@@ -133,15 +133,9 @@ service.interceptors.response.use(
   error => {
     // 处理 HTTP 状态码错误 (非 200)
     console.error('Response Error:', error)
-    // 这里也可以处理 HTTP 401 (如果后端不是返回 200 + code: 401 而是直接返回 HTTP 401)
-    // 目前根据文档，后端返回统一结构，状态码通常是 200，业务码在 body 中
-    // 但为了健壮性，这里也应该处理一下 HTTP 401
     
-    if (error.response && error.response.status === 401) {
-       // 逻辑同上，但 axios error 结构不同，需要小心处理
-       // 鉴于 API 文档描述的是统一响应结构，优先信任 response 拦截器中的逻辑
-       // 这里仅作为兜底
-    }
+    // 如果需要特殊处理 HTTP 401 可以在这里添加逻辑
+    // 目前后端通过业务状态码返回认证错误，由上方拦截器处理
     
     toast.error(error.message || '网络请求失败')
     return Promise.reject(error)

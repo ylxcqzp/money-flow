@@ -45,20 +45,25 @@ const router = createRouter({
 })
 
 /**
- * 路由守卫
- * 检查用户登录状态
+ * 全局前置守卫
+ * 负责路由跳转前的权限验证
+ * @param {RouteLocationNormalized} to 即将要进入的目标路由对象
+ * @param {RouteLocationNormalized} from 当前导航正要离开的路由
+ * @param {NavigationGuardNext} next 放行函数
  */
 router.beforeEach((to, from, next) => {
-    // 注意：Pinia store 必须在 router 钩子内部调用
+    // 注意：Pinia store 必须在 router 钩子内部调用，否则会报错
     const authStore = useAuthStore()
     
-    if (to.meta.requiresAuth && !authStore.user) {
-        // 需要登录但未登录 -> 跳转登录页
+    // 检查目标路由是否需要认证
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        // 需要登录但未登录 -> 重定向到登录页
         next('/login')
-    } else if (to.path === '/login' && authStore.user) {
-        // 已登录但访问登录页 -> 跳转首页
+    } else if (to.path === '/login' && authStore.isAuthenticated) {
+        // 已登录但尝试访问登录页 -> 重定向到首页
         next('/')
     } else {
+        // 正常放行
         next()
     }
 })

@@ -8,7 +8,7 @@ import { useTransactionStore } from '../stores/transaction'
 import { ElMessageBox } from 'element-plus'
 import { 
   Plus, Trash2, Edit2, Wallet, CreditCard, Smartphone, MessageCircle, 
-  Save, X, Check, Info
+  Save, X, Check, Info, Loader2
 } from 'lucide-vue-next'
 import BaseSelect from './BaseSelect.vue'
 
@@ -19,6 +19,7 @@ const emit = defineEmits(['close']) // 事件：关闭弹窗
 const editingId = ref(null)         // 当前正在编辑的账户 ID，null 表示新增模式
 const formRef = ref(null)           // 表单 DOM 引用，用于滚动定位
 const isSubmitting = ref(false)     // 提交状态
+const deletingId = ref(null)        // 正在删除的账户 ID
 
 // 表单响应式数据
 const newAccount = ref({
@@ -91,6 +92,7 @@ const resetForm = () => {
  * 处理添加账户逻辑
  */
 const handleAdd = async () => {
+  if (isSubmitting.value) return
   if (!newAccount.value.name) return
   
   isSubmitting.value = true
@@ -107,6 +109,7 @@ const handleAdd = async () => {
  * 处理更新账户逻辑
  */
 const handleUpdate = async () => {
+  if (isSubmitting.value) return
   if (!newAccount.value.name) return
   
   isSubmitting.value = true
@@ -124,6 +127,8 @@ const handleUpdate = async () => {
  * @param {string} id 账户 ID
  */
 const handleDelete = async (id) => {
+  if (deletingId.value) return
+
   try {
     await ElMessageBox.confirm(
       '确定要删除这个账户吗？如果该账户已有交易记录，将无法删除。',
@@ -134,9 +139,13 @@ const handleDelete = async (id) => {
         type: 'warning',
       }
     )
+    
+    deletingId.value = id
     await store.deleteAccount(id)
   } catch (e) {
     // cancelled
+  } finally {
+    deletingId.value = null
   }
 }
 </script>
@@ -186,8 +195,13 @@ const handleDelete = async (id) => {
           <button @click="startEdit(acc)" class="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all">
             <Edit2 :size="18" />
           </button>
-          <button @click="handleDelete(acc.id)" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-            <Trash2 :size="18" />
+          <button 
+            @click="handleDelete(acc.id)" 
+            :disabled="deletingId === acc.id"
+            class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Loader2 v-if="deletingId === acc.id" class="animate-spin" :size="18" />
+            <Trash2 v-else :size="18" />
           </button>
         </div>
       </div>
@@ -279,7 +293,8 @@ const handleDelete = async (id) => {
             :disabled="isSubmitting"
             class="flex-[2] py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <component :is="isSubmitting ? 'div' : (editingId ? Save : Plus)" :size="18" :class="{ 'animate-spin': isSubmitting && !editingId && !Save }" />
+            <Loader2 v-if="isSubmitting" class="animate-spin" :size="18" />
+            <component v-else :is="editingId ? Save : Plus" :size="18" />
             <span v-if="isSubmitting">处理中...</span>
             <span v-else>{{ editingId ? '保存修改' : '确认添加' }}</span>
           </button>

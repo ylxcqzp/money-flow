@@ -179,6 +179,8 @@ const removeCategoryBudget = (catId) => {
  * 处理保存预算的操作
  */
 const handleSave = async () => {
+  if (isSubmitting.value) return
+  
   let total = Number(totalBudget.value) || 0
   const sum = totalCategoryBudget.value
 

@@ -5,7 +5,7 @@
  */
 import { ref, computed } from 'vue'
 import { useTransactionStore } from '../stores/transaction'
-import { X, Calendar, Repeat, Tag, DollarSign, Info, Wallet } from 'lucide-vue-next'
+import { X, Calendar, Repeat, Tag, DollarSign, Info, Wallet, Loader2 } from 'lucide-vue-next'
 import BaseSelect from './BaseSelect.vue'
 import BaseDatePicker from './BaseDatePicker.vue'
 
@@ -330,7 +330,7 @@ const handleSubmit = async () => {
                 :disabled="isSubmitting"
                 class="flex-1 px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all active:scale-95 shadow-lg shadow-primary-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <div v-if="isSubmitting" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <Loader2 v-if="isSubmitting" class="animate-spin" :size="16" />
                 {{ isSubmitting ? '保存中...' : '确认设置' }}
               </button>
             </div>

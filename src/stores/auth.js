@@ -17,7 +17,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 统一设置认证数据
-   * @param {Object} data 
+   * @param {Object} data 认证响应数据
+   * @param {string} data.accessToken 访问令牌
+   * @param {string} [data.refreshToken] 刷新令牌
+   * @param {Object} [data.user] 用户信息对象
    */
   const setAuthData = (data) => {
     accessToken.value = data.accessToken || data.token
@@ -66,7 +69,6 @@ export const useAuthStore = defineStore('auth', () => {
       notificationStore.success('验证码已发送至您的邮箱，请查收')
       return true
     } catch (error) {
-      // notificationStore.error(error.message || '发送验证码失败')
       throw error
     }
   }
@@ -108,8 +110,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 退出登录
+   * 清除本地存储的 Token 和用户信息
+   * @param {boolean} silent 是否静默退出（不显示通知），默认为 false
    */
-  const logout = () => {
+  const logout = async (silent = false) => {
     accessToken.value = ''
     refreshToken.value = ''
     user.value = null
@@ -118,7 +122,10 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('money-flow-refresh-token')
     localStorage.removeItem('money-flow-user')
     
-    notificationStore.success('已安全退出')
+    if (!silent) {
+      notificationStore.success('已安全退出')
+    }
+    return true
   }
 
   return {

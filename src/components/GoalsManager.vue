@@ -9,7 +9,7 @@ import { ElMessageBox } from 'element-plus'
 import { 
   Plus, Trash2, Target, Trophy, Plane, Home, Car, Laptop, 
   Heart, Gift, ShoppingCart, Briefcase, HelpCircle, Save, X, 
-  ChevronRight, ArrowUpCircle, ArrowDownCircle, Calendar
+  ChevronRight, ArrowUpCircle, ArrowDownCircle, Calendar, Loader2
 } from 'lucide-vue-next'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -20,6 +20,7 @@ const showAddForm = ref(false)
 const depositGoalId = ref(null) // 正在存款的目标 ID
 const depositAmount = ref('')   // 存款/取款金额
 const isSubmitting = ref(false) // 提交状态
+const deletingId = ref(null)    // 正在删除的目标 ID
 
 // 新目标表单数据
 const newGoal = ref({
@@ -135,6 +136,8 @@ const handleUpdateProgress = async (isDeposit = true) => {
  * 处理删除目标
  */
 const handleDeleteGoal = async (id) => {
+  if (deletingId.value) return
+
   try {
     await ElMessageBox.confirm(
       '确定要删除这个储蓄目标吗？',
@@ -145,9 +148,13 @@ const handleDeleteGoal = async (id) => {
         type: 'warning',
       }
     )
+    
+    deletingId.value = id
     await store.deleteGoal(id)
   } catch (e) {
     // cancelled
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -251,8 +258,8 @@ const resetForm = () => {
         :disabled="isSubmitting"
         class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-100 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <Save v-if="!isSubmitting" :size="18" />
-        <div v-else class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+        <Loader2 v-if="isSubmitting" class="animate-spin" :size="18" />
+        <Save v-else :size="18" />
         {{ isSubmitting ? '处理中...' : '开启储蓄计划' }}
       </button>
     </div>
@@ -283,8 +290,13 @@ const resetForm = () => {
                 </div>
               </div>
             </div>
-            <button @click="handleDeleteGoal(goal.id)" class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-              <Trash2 :size="16" />
+            <button 
+              @click="handleDeleteGoal(goal.id)" 
+              :disabled="deletingId === goal.id"
+              class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Loader2 v-if="deletingId === goal.id" class="animate-spin" :size="16" />
+              <Trash2 v-else :size="16" />
             </button>
           </div>
 
@@ -363,17 +375,23 @@ const resetForm = () => {
               <div class="flex gap-3 w-full">
                 <button 
                   @click="handleUpdateProgress(false)"
-                  class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                  :disabled="isSubmitting"
+                  class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <ArrowDownCircle :size="18" />
-                  取出
+                  <Loader2 v-if="isSubmitting" class="animate-spin text-slate-400" :size="18" />
+                  <ArrowDownCircle v-else :size="18" />
+                  <span v-if="isSubmitting">处理中...</span>
+                  <span v-else>取出</span>
                 </button>
                 <button 
                   @click="handleUpdateProgress(true)"
-                  class="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
+                  :disabled="isSubmitting"
+                  class="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <ArrowUpCircle :size="18" />
-                  存入
+                  <Loader2 v-if="isSubmitting" class="animate-spin" :size="18" />
+                  <ArrowUpCircle v-else :size="18" />
+                  <span v-if="isSubmitting">处理中...</span>
+                  <span v-else>存入</span>
                 </button>
               </div>
             </div>

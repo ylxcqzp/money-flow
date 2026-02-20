@@ -57,6 +57,7 @@ const handleSendCode = async () => {
 }
 
 const handleSubmit = async () => {
+  if (isLoading.value) return
   if (!isLogin.value) {
     if (form.value.password !== form.value.confirmPassword) {
       notificationStore.warning('两次输入的密码不一致')

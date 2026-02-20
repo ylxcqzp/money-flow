@@ -38,6 +38,7 @@ const showGoalsManager = ref(false)      // 储蓄目标弹窗
 const showUserMenu = ref(false)          // 用户菜单显示状态
 const editingTransaction = ref(null)     // 当前正在编辑的交易对象
 const deletingRecurringId = ref(null)    // 正在删除的周期账单ID
+const isLoggingOut = ref(false)          // 正在退出登录
 
 // 监听所有弹窗状态，控制 body 滚动锁定
 const isAnyModalOpen = computed(() => 
@@ -57,13 +58,21 @@ watch(isAnyModalOpen, (isOpen) => {
  * 退出登录
  */
 const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/login')
+  if (isLoggingOut.value) return
+  isLoggingOut.value = true
+  try {
+    await authStore.logout()
+    router.push('/login')
+  } finally {
+    isLoggingOut.value = false
+  }
 }
 
 onMounted(() => {
   // 初始化数据
-  store.initData()
+  if (!store.isInitialized) {
+    store.initData()
+  }
   
   // 检查汇率更新
   const lastUpdate = store.lastExchangeRateUpdate
@@ -223,10 +232,12 @@ const handleDeleteRecurring = async (id) => {
               </div>
               <button 
                 @click="handleLogout"
-                class="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+                :disabled="isLoggingOut"
+                class="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <LogOut :size="16" />
-                退出登录
+                <Loader2 v-if="isLoggingOut" class="animate-spin" :size="16" />
+                <LogOut v-else :size="16" />
+                {{ isLoggingOut ? '退出中...' : '退出登录' }}
               </button>
             </div>
             

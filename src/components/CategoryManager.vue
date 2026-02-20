@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Edit2, ChevronRight, ChevronDown, 
   Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, 
   ShoppingBag, Store, Shirt, Gamepad2, Banknote, Trophy, TrendingUp, 
-  HelpCircle, Save, X, ChevronUp, ChevronLeft,
+  HelpCircle, Save, X, ChevronUp, ChevronLeft, Loader2,
   Apple, Baby, Beer, Book, Briefcase, Camera, Candy, Cigarette, 
   Cloud, Computer, Dog, Dumbbell, Flower2, Gift, Glasses, GraduationCap, 
   Heart, Home, Image, Key, Laptop, LifeBuoy, Lightbulb, Luggage, 
@@ -26,6 +26,7 @@ const activeTab = ref('expense')         // 当前激活的标签页：'expense'
 const editingId = ref(null)              // 正在编辑的分类 ID
 const addingToParentId = ref(null)       // 正在为哪个父分类添加子分类
 const isSubmitting = ref(false)          // 提交状态
+const deletingId = ref(null)             // 正在删除的分类 ID
 // 默认全部折叠
 const collapsedCategories = ref(new Set(store.categories.map(c => c.id)))
 const viewMode = ref('list')             // 'list' | 'form'
@@ -191,6 +192,7 @@ const resetForm = () => {
  * 处理添加分类逻辑
  */
 const handleAdd = async () => {
+  if (isSubmitting.value) return
   if (!newCategory.value.name) return
   
   isSubmitting.value = true
@@ -206,6 +208,7 @@ const handleAdd = async () => {
  * 处理更新分类逻辑
  */
 const handleUpdate = async () => {
+  if (isSubmitting.value) return
   if (!newCategory.value.name) return
   
   isSubmitting.value = true
@@ -222,6 +225,8 @@ const handleUpdate = async () => {
  * @param {string} id 分类 ID
  */
 const handleDelete = async (id) => {
+  if (deletingId.value) return
+  
   try {
     await ElMessageBox.confirm(
       '确定要删除这个分类吗？',
@@ -232,9 +237,13 @@ const handleDelete = async (id) => {
         type: 'warning',
       }
     )
+    
+    deletingId.value = id
     await store.deleteCategory(id)
   } catch (e) {
     // cancelled
+  } finally {
+    deletingId.value = null
   }
 }
 </script>
@@ -297,17 +306,26 @@ const handleDelete = async (id) => {
                   :class="{ 'rotate-180': isCollapsed(cat.id) }"
                 />
               </div>
-              
-              <!-- 父分类操作按钮 -->
+
+              <!-- 操作按钮 -->
               <div class="flex items-center gap-1 shrink-0 border-l border-slate-50 pl-2">
-                <button @click="startAddSub(cat.id)" class="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="添加子分类">
-                  <Plus :size="16" />
-                </button>
                 <button @click="startEdit(cat)" class="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all">
                   <Edit2 :size="16" />
                 </button>
-                <button @click="handleDelete(cat.id)" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                  <Trash2 :size="16" />
+                <button 
+                  @click="startAddSub(cat.id)" 
+                  class="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                  title="添加子分类"
+                >
+                  <Plus :size="16" />
+                </button>
+                <button 
+                  @click="handleDelete(cat.id)" 
+                  :disabled="deletingId === cat.id"
+                  class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Loader2 v-if="deletingId === cat.id" class="animate-spin" :size="16" />
+                  <Trash2 v-else :size="16" />
                 </button>
               </div>
             </div>
@@ -334,8 +352,13 @@ const handleDelete = async (id) => {
                     <button @click="startEdit(sub)" class="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-lg transition-all">
                       <Edit2 :size="14" />
                     </button>
-                    <button @click="handleDelete(sub.id)" class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all">
-                      <Trash2 :size="14" />
+                    <button 
+                      @click="handleDelete(sub.id)" 
+                      :disabled="deletingId === sub.id"
+                      class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Loader2 v-if="deletingId === sub.id" class="animate-spin" :size="14" />
+                      <Trash2 v-else :size="14" />
                     </button>
                   </div>
                 </div>
@@ -437,7 +460,8 @@ const handleDelete = async (id) => {
             :disabled="isSubmitting"
             class="flex-[2] py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-primary-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <component :is="isSubmitting ? 'div' : (editingId ? Save : Plus)" :size="18" :class="{ 'animate-spin': isSubmitting && !editingId && !Save }" />
+            <Loader2 v-if="isSubmitting" class="animate-spin" :size="18" />
+            <component v-else :is="editingId ? Save : Plus" :size="18" />
             <span v-if="isSubmitting">处理中...</span>
             <span v-else>{{ editingId ? '保存修改' : '确认添加' }}</span>
           </button>

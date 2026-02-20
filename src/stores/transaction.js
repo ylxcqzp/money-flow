@@ -61,30 +61,49 @@ export const useTransactionStore = defineStore('transaction', () => {
   
   // 加载状态
   const loading = ref(false)
+  const isInitialized = ref(false)
+  let initPromise = null
 
   // 通知 store
   const notificationStore = useNotificationStore()
 
   // --- 初始化与数据获取 ---
 
-  async function initData() {
+  /**
+   * 初始化数据
+   * 加载账户、分类、目标、周期性规则、交易记录和预算
+   * 包含防重逻辑，避免重复请求
+   * @param {boolean} force 是否强制重新加载
+   */
+  async function initData(force = false) {
+    if (isInitialized.value && !force) return
+    if (initPromise && !force) return initPromise
+    
     loading.value = true
-    try {
-      await Promise.all([
-        fetchAccounts(),
-        fetchCategories(),
-        fetchGoals(),
-        fetchRecurringRules()
-      ])
-      // 初始加载交易记录
-      await fetchTransactions()
-      // 初始加载预算
-      await fetchBudget()
-    } catch (error) {
-      console.error('Init data error:', error)
-    } finally {
-      loading.value = false
-    }
+    
+    initPromise = (async () => {
+      try {
+        await Promise.all([
+          fetchAccounts(),
+          fetchCategories(),
+          fetchGoals(),
+          fetchRecurringRules()
+        ])
+        // 初始加载交易记录
+        await fetchTransactions()
+        // 初始加载预算
+        await fetchBudget()
+        
+        isInitialized.value = true
+      } catch (error) {
+        console.error('Init data error:', error)
+      } finally {
+        loading.value = false
+        initPromise = null
+      }
+    })()
+    
+    return initPromise
   }
 
   async function fetchAccounts() {
@@ -375,17 +394,6 @@ export const useTransactionStore = defineStore('transaction', () => {
     }
   }
 
-  async function checkAndGenerateRecurring() {
-    try {
-      await recurringApi.generateTransactions()
-      await fetchTransactions()
-      await fetchAccounts()
-      notificationStore.success('周期性账单已自动生成')
-      return true
-    } catch (e) {
-      return false
-    }
-  }
 
   async function deleteRecurringTransaction(id) {
     try {
@@ -643,6 +651,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     filterDate,
     sortConfig,
     loading,
+    isInitialized,
     
     // 计算属性
     totalIncome,
@@ -683,7 +692,6 @@ export const useTransactionStore = defineStore('transaction', () => {
     
     setBudget,
     addRecurringTransaction,
-    checkAndGenerateRecurring,
     deleteRecurringTransaction,
     
     addAccount,

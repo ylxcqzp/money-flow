@@ -1,22 +1,8 @@
 <script setup>
-import { onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useTransactionStore } from '@/stores/transaction'
-
 /**
  * 根组件 App.vue
  * 负责应用的基础布局和路由视图的渲染
- * 同时在应用启动时检查并生成周期性交易
  */
-
-const authStore = useAuthStore()
-const transactionStore = useTransactionStore()
-
-onMounted(async () => {
-  if (authStore.isAuthenticated) {
-    await transactionStore.checkAndGenerateRecurring()
-  }
-})
 </script>
 
 <template>

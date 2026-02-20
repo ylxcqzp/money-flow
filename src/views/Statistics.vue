@@ -62,7 +62,7 @@ const router = useRouter();
 const store = useTransactionStore();
 
 onMounted(async () => {
-  if (store.transactions.length === 0 && !store.loading) {
+  if (!store.isInitialized) {
     await store.initData()
   }
 })

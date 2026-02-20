@@ -10,7 +10,7 @@ import {
   Utensils, Bike, ChefHat, Coffee, Car, Bus, CarTaxiFront, Fuel, ShoppingBag, Store, Shirt, Gamepad2, 
   Banknote, Trophy, TrendingUp, HeartPulse, GraduationCap, Gift, Home, Sparkles, Key, Zap, Wrench, 
   Briefcase, PenTool, Plane, Ticket, Camera, Cpu, Smartphone, Cloud, Wifi, Dog, Bone, ToyBrick, 
-  Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw
+  Scissors, Droplets, Dumbbell, Footprints, MoreHorizontal, LineChart, PieChart, RotateCcw, Loader2
 } from 'lucide-vue-next'
 import BaseSelect from './BaseSelect.vue'
 import BaseDatePicker from './BaseDatePicker.vue'
@@ -464,10 +464,12 @@ const handleSubmit = async () => {
       </div>
       <button 
         type="submit"
-        class="w-full h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-200 flex items-center justify-center gap-2 text-base"
+        :disabled="isSubmitting"
+        class="w-full h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-200 flex items-center justify-center gap-2 text-base disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <Check :size="20" />
-        保存账单
+        <Loader2 v-if="isSubmitting" class="animate-spin" :size="20" />
+        <Check v-else :size="20" />
+        <span>{{ isSubmitting ? '保存中...' : '保存账单' }}</span>
       </button>
     </div>
   </form>
